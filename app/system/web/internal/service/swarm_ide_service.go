@@ -68,7 +68,7 @@ func (s *swarm) OpenTheia(ctx context.Context, req *define.OpenIDEReq) (url stri
 
 func (s *swarm) execStopAndRemoveTheiaDocker(req *define.CloseIDEReq) (err error) {
 	// 删除容器
-	cmd := fmt.Sprintf("docker service rm myIde-%d-%d-%d", req.LanguageEnum, req.UserId, req.LabId)
+	cmd := fmt.Sprintf("docker service rm myIde-%d-%d", req.UserId, req.LabId)
 	// 不handle error的原因同上
 	if _, err = utils.DeploymentSsh.ExecCmd(cmd); err != nil {
 		return err
@@ -83,37 +83,43 @@ func (s *swarm) execRunTheiaDocker(ctx context.Context, req *define.OpenIDEReq) 
 		return 0, err
 	}
 	// 镜像地址
-	imageName := getImageName(req.LanguageEnum)
+	imageName := getImageName(1)
 	// 是否可编辑
 	isEditAble := ""
 	// 是否可编辑
 	if req.IsEditAble {
 		isEditAble = "-u root"
 	}
-	mountNfsWorkspaceIp := ""
-	mountNfsWorkSpacePath := ""
-	mountNfsEnvIp := ""
-	mountNfsEnvPath := getWorkspacePathRemote(strconv.Itoa(req.UserId), fmt.Sprintf(".env-%d", req.LanguageEnum))
-	mountContainerEnvPath := getDockerEnvMount(req.LanguageEnum)
-	memoryLimit := g.Cfg().GetString("ide.image.memoryLimit")
-	cmd := fmt.Sprintf("docker run -itd -u root --mount 'type=volume,src=nfs-workspace,dst=/home/project,"+
+	// 远程挂载的nfs主机地址
+	mountNfsWorkspaceIp := g.Cfg().GetString("ide.storage.host")
+	// nfs主机路径
+	mountNfsWorkspacePath := getWorkspacePathMounted(strconv.Itoa(req.MountedUserId), strconv.Itoa(req.LabId))
+	mountNfsEnvPath := getWorkspacePathMounted(strconv.Itoa(req.UserId), fmt.Sprintf(".env-%d", 1))
+	mountContainerEnvPath := getDockerEnvMount(1)
+	memoryLimit := g.Cfg().GetString("ide.config.memoryLimit")
+
+	//s := "docker service create --mount 'type=volume,src=nfs-test,dst=/home/project,volume-driver=local,volume-opt=type=nfs,volume-opt=device=%s:%s,volume-opt=o=addr=192.168.1.79,vers=4,soft,timeo=180,bg,tcp,rw' -p 8888:80 --name nginx nginx:1.12"
+	cmd := fmt.Sprintf("docker run -itd "+
+		"%s "+
+		"--mount 'type=volume,src=nfs-workspace,dst=/home/project,"+
 		"volume-driver=local,volume-opt=type=nfs,volume-opt=device=%s:%s,\""+
 		"volume-opt=o=addr=%s,vers=4,soft,timeo=180,bg,tcp,rw\"' "+
 		"--mount 'type=volume,src=nfs-env,dst=%s,volume-driver=local,volume-opt=type=nfs,"+
 		"volume-opt=device=%s:%s,\"volume-opt=o=addr=%s,vers=4,soft,timeo=180,bg,tcp,rw\"' "+
 		"-p %d:3000 %s --reserve-memory %s --name myIde-%d-%d-%d %s",
+		memoryLimit,
 		mountNfsWorkspaceIp,
-		mountNfsWorkSpacePath,
+		mountNfsWorkspacePath,
+		mountNfsWorkspaceIp,
 		mountNfsWorkspaceIp,
 		mountContainerEnvPath,
-		mountNfsEnvIp,
 		mountNfsEnvPath,
-		mountNfsEnvIp,
+		mountNfsWorkspaceIp,
 		port,
 		isEditAble,
 		memoryLimit,
 		// 内存限制
-		req.LanguageEnum, req.UserId, req.LabId,
+		1, req.UserId, req.LabId,
 		// 名字里用于做标识
 		imageName,
 	)

@@ -21,5 +21,13 @@ func (f *fileApi) UploadFile(r *ghttp.Request) {
 	if err != nil {
 		response.Exit(r, err)
 	}
-	response.Succ(r, g.Map{"url": url})
+	response.Succ(r, g.Map{"fileSrc": url})
+}
+
+func (f fileApi) RemoveFile(r *ghttp.Request) {
+	removeFile := r.GetString("file")
+	if err := service.File.RemoveObject(r.Context(), removeFile); err != nil {
+		response.Exit(r, err)
+	}
+	response.Succ(r)
 }

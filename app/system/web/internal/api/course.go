@@ -76,37 +76,39 @@ func (c *courseAPI) ImportStudent2Class(r *ghttp.Request) {
 	response.Succ(r, resp)
 }
 
-//// InsertCourse 新建课程
-//// @receiver receiver
-//// @params r
-//// @date 2021-05-24 23:54:06
-//func (c *courseAPI) InsertCourse(r *ghttp.Request) {
-//	var req *define.InsertCourseReq
-//	if err := r.Parse(&req); err != nil {
-//		response.Exit(r, err)
-//	}
-//	// 保存
-//	if err := service.Course.InsertCourse(r.Context(), req); err != nil {
-//		response.Exit(r, err)
-//	}
-//	response.Succ(r, true)
-//}
-//
-//// UpdateCourse 更新课程
-//// @receiver receiver
-//// @params r
-//// @date 2021-05-25 00:01:19
-//func (c *courseAPI) UpdateCourse(r *ghttp.Request) {
-//	var req *define.UpdateCourseReq
-//	if err := r.Parse(&req); err != nil {
-//		response.Exit(r, err)
-//	}
-//	//保存
-//	if err := service.Course.UpdateCourse(r.Context(), req); err != nil {
-//		response.Exit(r, err)
-//	}
-//	response.Succ(r, true)
-//}
+// CreateCourse 创建课程
+// @receiver c *courseAPI
+// @param r *ghttp.Request
+// @date 2021-09-16 20:15:45
+func (c *courseAPI) CreateCourse(r *ghttp.Request) {
+	var req *define.CreateCourseReq
+	if err := r.Parse(&req); err != nil {
+		return
+	}
+	id, err := service.Course.CreateCourse(r.Context(), req)
+	if err != nil {
+		return
+	}
+	response.Succ(r, g.Map{
+		"id": id,
+	})
+}
+
+// UpdateCourse 更新课程
+// @receiver receiver
+// @params r
+// @date 2021-05-25 00:01:19
+func (c *courseAPI) UpdateCourse(r *ghttp.Request) {
+	var req *define.UpdateCourseReq
+	if err := r.Parse(&req); err != nil {
+		response.Exit(r, err)
+	}
+	//保存
+	if err := service.Course.UpdateCourse(r.Context(), req); err != nil {
+		response.Exit(r, err)
+	}
+	response.Succ(r, true)
+}
 
 // ListCourseByTeacherId 列出教师开展的课程
 // @receiver receiver

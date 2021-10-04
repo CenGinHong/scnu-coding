@@ -10,8 +10,17 @@ var Course = courseApi{}
 
 type courseApi struct{}
 
-func (a *courseApi) GetAllCourse(r *ghttp.Request) {
-	resp, err := service.Course.GetAllCourse(r.Context())
+func (a *courseApi) ListAllCourse(r *ghttp.Request) {
+	resp, err := service.Course.ListAllCourse(r.Context())
+	if err != nil {
+		response.Exit(r, err)
+	}
+	response.Succ(r, resp)
+}
+
+func (a courseApi) ListCourseEnroll(r *ghttp.Request) {
+	courseId := r.GetInt("courseId")
+	resp, err := service.Course.ListEnroll(r.Context(), courseId)
 	if err != nil {
 		response.Exit(r, err)
 	}

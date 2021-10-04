@@ -6,6 +6,7 @@ package service
 
 import (
 	"context"
+	"github.com/gogf/gf/errors/gcode"
 	"github.com/gogf/gf/errors/gerror"
 	"golang.org/x/crypto/bcrypt"
 	"scnu-coding/app/dao"
@@ -119,6 +120,7 @@ func (u userService) GetUserInfo(ctx context.Context) (resp *define.GetUserInfoR
 // @date 2021-01-10 00:07:55
 func (u *userService) Update(ctx context.Context, req *define.UpdateUserInfoReq) (err error) {
 	ctxUser := service.Context.Get(ctx).User
+	// 查一下是否修改了邮箱
 	oldEmail, err := dao.SysUser.Ctx(ctx).WherePri(ctxUser.UserId).Value(dao.SysUser.Columns.Email)
 	if err != nil {
 		return err
@@ -130,13 +132,17 @@ func (u *userService) Update(ctx context.Context, req *define.UpdateUserInfoReq)
 		}
 	}
 	// 修改了密码，检查密码是否
-	if req.Password != "" {
+	if req.Password != nil {
 		password, err := dao.SysUser.Ctx(ctx).WherePri(ctxUser.UserId).Value(dao.SysUser.Columns.Password)
 		if err != nil {
 			return err
 		}
-		if err = bcrypt.CompareHashAndPassword(password.Bytes(), []byte(req.OldPassword)); err != nil {
-			return gerror.NewCode(-1, "密码验证错误")
+		// 旧密码为空，直接返回错误
+		if req.OldPassword == nil {
+			return gerror.NewCode(gcode.CodeValidationFailed, "密码验证错误")
+		}
+		if err = bcrypt.CompareHashAndPassword(password.Bytes(), []byte(*req.OldPassword)); err != nil {
+			return gerror.NewCode(gcode.CodeValidationFailed, "密码验证错误")
 		}
 	}
 	if _, err = dao.SysUser.Ctx(ctx).WherePri(ctxUser.UserId).Data(req).Update(); err != nil {

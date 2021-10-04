@@ -28,28 +28,29 @@ const (
 )
 
 type MossClient struct {
-	currentStage       Stage
-	addr               string
-	userId             string
-	language           string
+	currentStage       Stage  // 当前状态
+	addr               string // 地址
+	userId             string // 用户id
+	language           string // 语言
 	setId              int
 	optM               int64
 	optD               int
 	optX               int
 	optN               int
 	optC               string
-	ResultURL          *url.URL
+	ResultURL          *url.URL // 结果url
 	supportedLanguages []string
 	conn               *net.TCPConn
 }
 
 // NewMossClient 构造函数
-// @params language 语言
+// @params language_enum 语言
 // @params userId 用户id
 // @return *MossClient
 // @return error
 // @date 2021-01-11 17:03:26
 func NewMossClient(language string, userId string) (*MossClient, error) {
+	// 支持的语言
 	supportedLanguages := []string{"c", "cc", "java", "ml", "pascal", "ada", "lisp", "schema", "haskell", "fortran",
 		"ascii", "vhdl", "perl", "matlab", "python", "mips", "prolog", "spice", "vb", "csharp", "modula2", "a8086",
 		"javascript", "plsql"}
@@ -57,6 +58,7 @@ func NewMossClient(language string, userId string) (*MossClient, error) {
 	for _, supportedLanguage := range supportedLanguages {
 		if language == supportedLanguage {
 			isContain = true
+			break
 		}
 	}
 	if isContain {
@@ -74,7 +76,7 @@ func NewMossClient(language string, userId string) (*MossClient, error) {
 			language:           language,
 		}, nil
 	} else {
-		return nil, errors.New("MOSS Server does not recognize this programming language")
+		return nil, errors.New("MOSS Server does not recognize this programming language_enum")
 	}
 }
 
@@ -201,9 +203,9 @@ func (c *MossClient) sendInitialization() (err error) {
 // @date 2021-01-11 22:39:27
 func (c *MossClient) sendLanguage() error {
 	if c.currentStage != awaitingLanguage {
-		return errors.New("language already sent or client is not initialized yet")
+		return errors.New("language_enum already sent or client is not initialized yet")
 	}
-	if err := c.sendCommand("language", c.language); err != nil {
+	if err := c.sendCommand("language_enum", c.language); err != nil {
 		return err
 	}
 	serverByte := &bytes.Buffer{}
@@ -214,7 +216,7 @@ func (c *MossClient) sendLanguage() error {
 	if len(serverString) > 0 && string(serverString) == "yes" {
 		c.currentStage = awaitingFiles
 	} else {
-		return errors.New("MOSS Server does not recognize this programming language")
+		return errors.New("MOSS Server does not recognize this programming language_enum")
 	}
 	return nil
 }

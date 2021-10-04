@@ -5,6 +5,7 @@ package api
 // @Description:
 
 import (
+	"fmt"
 	"scnu-coding/app/system/web/internal/define"
 	"scnu-coding/app/system/web/internal/service"
 	"scnu-coding/library/response"
@@ -39,10 +40,29 @@ func (i *ideAPI) OpenIDE(r *ghttp.Request) {
 // @param r *ghttp.Request
 // @date 2021-07-17 22:28:18
 func (i *ideAPI) OpenFront(r *ghttp.Request) {
-	Id := r.GetInt("userId")
-	labId := r.GetInt("labId")
-	if err := service.Ide.OpenFront(r.Context(), 0, Id, labId); err != nil {
-		response.Exit(r, err)
-	}
-	response.Succ(r, true)
+	fmt.Println("receive a open req")
+	//var req *define.IDEIdentifier
+	//if err := r.Parse(&req); err != nil {
+	//	response.Exit(r, err)
+	//}
+	//if err := service.Ide.OpenFront(r.Context(), req); err != nil {
+	//	response.Exit(r, err)
+	//}
+	//response.Succ(r)
+}
+
+// CloseFront 关闭IDE页面
+// @receiver i *ideAPI
+// @param r *ghttp.Request
+// @date 2021-09-19 21:28:39
+func (i *ideAPI) CloseFront(r *ghttp.Request) {
+	fmt.Println("receive a close req")
+	//var req *define.IDEIdentifier
+	//if err := r.Parse(&req); err != nil {
+	//	response.Exit(r, err)
+	//}
+	//if err := service.Ide.CloseFront(r.Context(), req); err != nil {
+	//	response.Exit(r, err)
+	//}
+	//response.Succ(r)
 }

@@ -12,37 +12,37 @@ import (
 
 // CourseDao is the manager for logic model data accessing and custom defined data operations functions management.
 type CourseDao struct {
-	Table   string          // Table is the underlying table name of the DAO.
-	Group   string          // Group is the database configuration group name of current DAO.
+	Table   string        // Table is the underlying table name of the DAO.
+	Group   string        // Group is the database configuration group name of current DAO.
 	Columns CourseColumns // Columns is the short type for Columns, which contains all the column names of Table for convenient usage.
 }
 
 // CourseColumns defines and stores column names for table course.
 type CourseColumns struct {
-	CourseId      string // 主键                
-    UserId        string // 教师id              
-    CourseName    string // 课程名称，限15字    
-    CourseDes     string // 课程描述，限300字   
-    CoverFileId   string // 封面url的id         
-    SecretKey     string // 加入课程的密码,6位  
-    IsClose       string // 结课标志            
-    LanguageType  string //                     
-    CreatedAt     string // 创建时间            
-    UpdatedAt     string // 修改时间
+	CourseId     string // 主键
+	UserId       string // 教师id
+	CourseName   string // 课程名称，限15字
+	CourseDes    string // 课程描述，限300字
+	CoverImg     string // 封面url
+	SecretKey    string // 加入课程的密码,6位
+	IsClose      string // 结课标志
+	LanguageType string //
+	CreatedAt    string // 创建时间
+	UpdatedAt    string // 修改时间
 }
 
 //  courseColumns holds the columns for table course.
 var courseColumns = CourseColumns{
-	CourseId:     "course_id",      
-            UserId:       "user_id",        
-            CourseName:   "course_name",    
-            CourseDes:    "course_des",     
-            CoverFileId:  "cover_file_id",  
-            SecretKey:    "secret_key",     
-            IsClose:      "is_close",       
-            LanguageType: "language_type",  
-            CreatedAt:    "created_at",     
-            UpdatedAt:    "updated_at",
+	CourseId:     "course_id",
+	UserId:       "user_id",
+	CourseName:   "course_name",
+	CourseDes:    "course_des",
+	CoverImg:     "cover_img",
+	SecretKey:    "secret_key",
+	IsClose:      "is_close",
+	LanguageType: "language_type",
+	CreatedAt:    "created_at",
+	UpdatedAt:    "updated_at",
 }
 
 // NewCourseDao creates and returns a new DAO object for table data access.

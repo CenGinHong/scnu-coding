@@ -3,16 +3,20 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/gogf/gf/errors/gcode"
 	"github.com/gogf/gf/errors/gerror"
 	"github.com/gogf/gf/os/gtime"
 	"github.com/gogf/gf/util/grand"
+	"io"
+	"io/ioutil"
+	"net/http"
 	component2 "scnu-coding/app/utils"
 	"time"
 )
 
 var Common = commonService{verCodeCache: component2.NewMyCache()}
 
-type commonService struct{ verCodeCache component2.MyCache }
+type commonService struct{ verCodeCache *component2.MyCache }
 
 func (c *commonService) SendVerificationCode(_ context.Context, email string) (err error) {
 	//生成6位随机数
@@ -73,11 +77,25 @@ func (c *commonService) CheckVerCode(email string, verCode string) (err error) {
 	}
 	// 不存在验证码
 	if v.IsNil() {
-		return gerror.NewCode(-1, "验证码错误")
+		return gerror.NewCode(gcode.CodeValidationFailed, "验证码错误")
 	}
 	// 验证码错误
 	if verCode != v.String() {
-		return gerror.NewCode(-1, "验证码错误")
+		return gerror.NewCode(gcode.CodeValidationFailed, "验证码错误")
 	}
 	return nil
+}
+
+func (c commonService) GetIp() (clientIP string, err error) {
+	responseClient, err := http.Get("https://ipw.cn/api/ip/myip") // 获取外网 IP
+	if err != nil {
+		return "", gerror.NewCode(gcode.CodeOperationFailed, "获取ip失败")
+	}
+	// 程序在使用完 response 后必须关闭 response 的主体。
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(responseClient.Body)
+	body, _ := ioutil.ReadAll(responseClient.Body)
+	clientIP = string(body)
+	return clientIP, nil
 }

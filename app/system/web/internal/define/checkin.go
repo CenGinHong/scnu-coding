@@ -25,7 +25,6 @@ type StartCheckInReq struct {
 	CheckinKey  string
 	CourseId    int
 	Duration    float64
-	Name        string
 }
 
 type UpdateCheckinDetailReq struct {
@@ -74,4 +73,16 @@ type CheckinRecordResp struct {
 		CheckinCount int `json:"checkinCount"`
 		TakeCount    int `json:"takeCount"`
 	} `json:"attendance"`
+}
+
+type ExportCheckinRecord struct {
+	gmeta.Meta      `orm:"table:checkin_record"`
+	CheckinRecordId int    `orm:"checkin_record_id"` // id
+	CheckinName     string `orm:"checkin_name"`
+	CheckinDetails  []*struct {
+		gmeta.Meta      `orm:"table:checkin_detail"`
+		CheckinRecordId int  `orm:"checkin_record_id"` // 签到记录id
+		UserId          int  // 参与签到的人
+		IsCheckin       bool // 是否签到
+	} `orm:"with:checkin_record_id"`
 }

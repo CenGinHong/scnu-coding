@@ -12,33 +12,35 @@ import (
 
 // LabDao is the manager for logic model data accessing and custom defined data operations functions management.
 type LabDao struct {
-	Table   string          // Table is the underlying table name of the DAO.
-	Group   string          // Group is the database configuration group name of current DAO.
+	Table   string     // Table is the underlying table name of the DAO.
+	Group   string     // Group is the database configuration group name of current DAO.
 	Columns LabColumns // Columns is the short type for Columns, which contains all the column names of Table for convenient usage.
 }
 
 // LabColumns defines and stores column names for table lab.
 type LabColumns struct {
-	LabId             string // 主键              
-    CourseId          string // 该实验隶属的课程  
-    Title             string // 标题              
-    Content           string // 实验内容描述      
-    AttachmentFileId  string // 实验附件url       
-    DeadLine          string // 截止时间          
-    CreatedAt         string // 创建时间          
-    UpdatedAt         string // 修改时间
+	LabId         string // 主键
+	CourseId      string // 该实验隶属的课程
+	Type          string // 枚举，练习，作业，考试
+	Title         string // 标题
+	Content       string // 实验内容描述
+	CreatedAt     string // 创建时间
+	UpdatedAt     string // 修改时间
+	AttachmentSrc string // 实验附件url
+	Deadline      string // 截止时间
 }
 
 //  labColumns holds the columns for table lab.
 var labColumns = LabColumns{
-	LabId:            "lab_id",              
-            CourseId:         "course_id",           
-            Title:            "title",               
-            Content:          "content",             
-            AttachmentFileId: "attachment_file_id",  
-            DeadLine:         "dead_line",           
-            CreatedAt:        "created_at",          
-            UpdatedAt:        "updated_at",
+	LabId:         "lab_id",
+	CourseId:      "course_id",
+	Type:          "type",
+	Title:         "title",
+	Content:       "content",
+	CreatedAt:     "created_at",
+	UpdatedAt:     "updated_at",
+	AttachmentSrc: "attachment_src",
+	Deadline:      "deadline",
 }
 
 // NewLabDao creates and returns a new DAO object for table data access.

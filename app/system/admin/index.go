@@ -16,7 +16,10 @@ func Init() {
 			group.PATCH("/", api.User.UpdateUser)
 		})
 		group.Group("/course", func(group *ghttp.RouterGroup) {
-			group.GET("/", api.Course.GetAllCourse)
+			group.GET("/", api.Course.ListAllCourse)
+			group.Group("/enroll", func(group *ghttp.RouterGroup) {
+				group.GET("/", api.Course.ListCourseEnroll)
+			})
 		})
 	})
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
 	"scnu-coding/app/system/web/internal/define"
@@ -58,6 +59,45 @@ func (l *labSummitAPI) ListLabSubmit(r *ghttp.Request) {
 	response.Succ(r, resp)
 }
 
+func (l *labSummitAPI) ListLabSubmitId(r *ghttp.Request) {
+	labId := r.GetInt("labId")
+	resp, err := service.LabSummit.ListLabSummitId(r.Context(), labId)
+	if err != nil {
+		response.Exit(r, err)
+	}
+	response.Succ(r, resp)
+}
+
+func (l *labSummitAPI) UpdateScoreAndComment(r *ghttp.Request) {
+	var req *define.UpdateLabSummitScoreAndCommentReq
+	if err := r.Parse(&req); err != nil {
+		response.Exit(r, err)
+	}
+	err := service.LabSummit.UpdateScoreAndComment(r.Context(), req)
+	if err != nil {
+		response.Exit(r, err)
+	}
+	response.Succ(r)
+}
+
+func (l *labSummitAPI) ExportScore(r *ghttp.Request) {
+	var req *define.ExportLabScoreReq
+	if err := r.Parse(&req); err != nil {
+		response.Exit(r, err)
+	}
+	file, err := service.LabSummit.ExportScore(r.Context(), req)
+	if err != nil {
+		response.Exit(r, err)
+	}
+	r.Response.Header().Set("Pragma", "No-cache")
+	r.Response.Header().Set("Cache-Control", "No-cache")
+	r.Response.Header().Set("Expires", "0")
+	r.Response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", "成绩表表"))
+	r.Response.Header().Set("Content-Type", "text/csv")
+	r.Response.Write(file)
+	r.Response.Flush()
+}
+
 //func (l *labSummitAPI) InsertCodeFinish(r *ghttp.Request) {
 //	var req *define.UpdateLabFinishReq
 //	if err := r.Parse(&req); err != nil {
@@ -87,18 +127,18 @@ func (l *labSummitAPI) ListLabSubmit(r *ghttp.Request) {
 //		"compiler_error_log": log,
 //	})
 //}
-//
-//func (l *labSummitAPI) readCodeData(r *ghttp.Request) {
-//	var req *define.CheckCodeQuickReq
-//	if err := r.Parse(&req); err != nil {
-//		response.Exit(r, err)
-//	}
-//	resp, err := service.LabSummit.readCodeData(r.Context(), req)
-//	if err != nil {
-//		response.Exit(r, err)
-//	}
-//	response.Succ(r, resp)
-//}
+
+func (l *labSummitAPI) GetCode(r *ghttp.Request) {
+	var req *define.ReadCodeDataReq
+	if err := r.Parse(&req); err != nil {
+		response.Exit(r, err)
+	}
+	resp, err := service.LabSummit.GetCodeData(r.Context(), req)
+	if err != nil {
+		response.Exit(r, err)
+	}
+	response.Succ(r, resp)
+}
 
 //func (receiver *labSummitAPI) PlagiarismCheck(r *ghttp.Request) {
 //	labId := r.GetInt("labId")

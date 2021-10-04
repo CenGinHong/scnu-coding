@@ -12,31 +12,31 @@ import (
 
 // CourseAnnouncementDao is the manager for logic model data accessing and custom defined data operations functions management.
 type CourseAnnouncementDao struct {
-	Table   string          // Table is the underlying table name of the DAO.
-	Group   string          // Group is the database configuration group name of current DAO.
+	Table   string                    // Table is the underlying table name of the DAO.
+	Group   string                    // Group is the database configuration group name of current DAO.
 	Columns CourseAnnouncementColumns // Columns is the short type for Columns, which contains all the column names of Table for convenient usage.
 }
 
 // CourseAnnouncementColumns defines and stores column names for table course_announcement.
 type CourseAnnouncementColumns struct {
-	CourseAnnouncementId  string // id                  
-    Title                 string // 标题                
-    CourseId              string // 课程id              
-    Content               string // 公告内容，限2000字  
-    AttachmentFileId      string // 附件url             
-    CreatedAt             string // 创建时间            
-    UpdatedAt             string // 修改时间
+	CourseAnnouncementId string // id
+	Title                string // 标题
+	CourseId             string // 课程id
+	Content              string // 公告内容，限2000字
+	AttachmentSrc        string // 文件url
+	CreatedAt            string // 创建时间
+	UpdatedAt            string // 修改时间
 }
 
 //  courseAnnouncementColumns holds the columns for table course_announcement.
 var courseAnnouncementColumns = CourseAnnouncementColumns{
-	CourseAnnouncementId: "course_announcement_id",  
-            Title:                "title",                   
-            CourseId:             "course_id",               
-            Content:              "content",                 
-            AttachmentFileId:     "attachment_file_id",      
-            CreatedAt:            "created_at",              
-            UpdatedAt:            "updated_at",
+	CourseAnnouncementId: "course_announcement_id",
+	Title:                "title",
+	CourseId:             "course_id",
+	Content:              "content",
+	AttachmentSrc:        "attachment_src",
+	CreatedAt:            "created_at",
+	UpdatedAt:            "updated_at",
 }
 
 // NewCourseAnnouncementDao creates and returns a new DAO object for table data access.

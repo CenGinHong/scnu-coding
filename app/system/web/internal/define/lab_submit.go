@@ -36,19 +36,40 @@ type ReadCodeDataReq struct {
 }
 
 type ListLabSubmitResp struct {
-	gmeta.Meta  `orm:"table:lab_submit"`
-	LabSubmitId int `orm:"lab_submit_id" json:"labSubmitId"` //
-	UserId      int `orm:"user_id" json:"-"`                 // 用户id
-	UserDetail  *struct {
+	gmeta.Meta `orm:"table:sys_user"`
+	UserId     int `orm:"user_id" json:"userId"` // 用户id
+	UserDetail *struct {
 		gmeta.Meta `orm:"table:sys_user"`
-		UserId     int    `orm:"user_id" json:"userId"`    // 用户id
+		UserId     int    `orm:"user_id" json:"-"`         // 用户id
 		Username   string `orm:"username" json:"username"` //
 		UserNum    string `orm:"user_num" json:"userNum"`  // 学号
 	} `orm:"with:user_id" json:"userDetail"`
-	IsFinish         bool        `orm:"is_finish" json:"isFinish"`
-	Score            int         `orm:"score" json:"score"`
-	LabSubmitComment string      `orm:"lab_submit_comment" json:"labSubmitComment"` // 评语
-	UpdatedAt        *gtime.Time `orm:"updated_time" json:"updatedTime"`            // 更新时间
+	LabSubmitDetail struct {
+		gmeta.Meta       `orm:"table:lab_submit"`
+		LabSubmitId      int         `orm:"lab_submit_id" json:"labSubmitId"` //
+		IsFinish         bool        `orm:"is_finish" json:"isFinish"`
+		Score            int         `orm:"score" json:"score"`
+		UserId           int         `orm:"user_id" json:"-"`
+		LabSubmitComment string      `orm:"lab_submit_comment" json:"labSubmitComment"` // 评语
+		UpdatedAt        *gtime.Time `orm:"updated_time" json:"updatedTime"`            // 更新时间
+	} `json:"labSubmitDetail"`
+}
+
+type ListLabSubmitIdResp struct {
+	gmeta.Meta `orm:"table:sys_user"`
+	UserId     int `orm:"user_id" json:"userId"` // 用户id
+	UserDetail *struct {
+		gmeta.Meta `orm:"table:sys_user"`
+		UserId     int    `orm:"user_id" json:"-"`         // 用户id
+		Username   string `orm:"username" json:"username"` //
+		UserNum    string `orm:"user_num" json:"userNum"`  // 学号
+	} `orm:"with:user_id" json:"userDetail"`
+	LabSubmitDetail *struct {
+		gmeta.Meta  `orm:"table:lab_submit"`
+		LabSubmitId int `orm:"lab_submit_id" json:"labSubmitId"` //
+		Score       int `orm:"score" json:"score"`
+		UserId      int `orm:"user_id" json:"-"`
+	} `json:"labSubmitDetail"`
 }
 
 //type LabSummitResp struct {
@@ -71,13 +92,31 @@ type ListLabSubmitResp struct {
 //}
 
 type UpdateLabSummitScoreAndCommentReq struct {
-	LabSubmitId int    // 实验id
-	Score       int    // 分数
-	Comment     string // 评语
+	UserId  int    // 用户id
+	LabId   int    // 实验id
+	Score   int    // 分数
+	Comment string // 评语
 }
 
 type UpdateLabFinishReq struct {
 	UserId   int
 	IsFinish bool // 是否已经完成
 	LabId    int
+}
+
+type ExportLabScore struct {
+	gmeta.Meta       `orm:"table:lab"`
+	LabId            int    `orm:"lab_id"`
+	Title            string `orm:"title"` // 标题
+	LabSubmitDetails []*struct {
+		gmeta.Meta `orm:"table:lab_submit"`
+		LabId      int  `orm:"lab_id"`
+		Score      *int `orm:"score"`
+		UserId     int  `orm:"user_id"`
+	} `orm:"with:lab_id"`
+}
+
+type ExportLabScoreReq struct {
+	CourseId int
+	LabIds   []int
 }

@@ -33,7 +33,10 @@ func (c *courseService) ListCourseByTeacherId(ctx context.Context) (resp *respon
 	ctxUser := service.Context.Get(ctx).User
 	ctxPageInfo := service.Context.Get(ctx).PageInfo
 	records := make([]*define.ListCourseResp, 0)
-	d := dao.Course.Ctx(ctx).Page(ctxPageInfo.Current, ctxPageInfo.PageSize)
+	d := dao.Course.Ctx(ctx)
+	if ctxPageInfo != nil {
+		d = d.Page(ctxPageInfo.Current, ctxPageInfo.PageSize)
+	}
 	d = d.Where(dao.Course.Columns.UserId, ctxUser.UserId)
 	total, err := d.Count()
 	if err != nil {
@@ -42,6 +45,13 @@ func (c *courseService) ListCourseByTeacherId(ctx context.Context) (resp *respon
 	// 查询
 	if err = d.OrderDesc(dao.Course.Columns.CreatedAt).Scan(&records); err != nil {
 		return nil, err
+	}
+	// 拼接地址
+	addr := service.File.GetMinioAddr(ctx)
+	for _, record := range records {
+		if record.CoverImg != "" {
+			record.CoverImg = addr + "/" + record.CoverImg
+		}
 	}
 	// 分页信息整合
 	resp = response.GetPageResp(records, total, nil)
@@ -77,28 +87,34 @@ func (c *courseService) ListCourseEnroll(ctx context.Context) (resp *response.Pa
 	if err = dao.Course.Ctx(ctx).WherePri(courseIds).WithAll().Scan(&records); err != nil {
 		return nil, err
 	}
+	// 拼接地址
+	addr := service.File.GetMinioAddr(ctx)
+	for _, record := range records {
+		if record.CoverImg != "" {
+
+			record.CoverImg = addr + "/" + record.CoverImg
+		}
+	}
 	// 分页信息整合
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil
 }
 
-//// UpdateCourse 更新课程
-//// @receiver receiver
-//// @params ctx
-//// @params req
-//// @return err
-//// @date 2021-05-03 15:52:49
-//func (c *courseService) UpdateCourse(ctx context.Context, req *define.UpdateCourseReq) (err error) {
-//	ctxUser := service.Context.Get(ctx).User
-//	// 保存
-//	if _, err = dao.Course.Where(g.Map{
-//		dao.Course.Columns.UserId:   ctxUser.UserId,
-//		dao.Course.Columns.CourseId: req.CourseId,
-//	}).OmitEmpty().Update(req); err != nil {
-//		return err
-//	}
-//	return nil
-//}
+// UpdateCourse 更新课程
+// @receiver receiver
+// @params ctx
+// @params req
+// @return err
+// @date 2021-05-03 15:52:49
+func (c *courseService) UpdateCourse(ctx context.Context, req *define.UpdateCourseReq) (err error) {
+	//ctxUser := service.Context.Get(ctx).User
+	// 保存
+	if _, err = dao.Course.Ctx(ctx).WherePri(req.CourseId).OmitNilData().Data(req).Update(req); err != nil {
+		return err
+	}
+	return nil
+}
+
 //
 //// InsertCourse 插入课程
 //// @receiver receiver
@@ -155,6 +171,13 @@ func (c *courseService) SearchCourseByCourseNameOrTeacherName(ctx context.Contex
 		ScanList(&records, "IsTakeDetail", "course_id:CourseId"); err != nil {
 		return nil, err
 	}
+	// 拼接地址
+	addr := service.File.GetMinioAddr(ctx)
+	for _, record := range records {
+		if record.CoverImg != "" {
+			record.CoverImg = addr + "/" + record.CoverImg
+		}
+	}
 	// 分页信息整合
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil
@@ -195,139 +218,6 @@ func (c *courseService) ExportCsvTemplate() (file *bytes.Buffer, err error) {
 	return file, nil
 }
 
-//func (c *courseService) ImportCsvTemplate(_ context.Context, uploadFile *ghttp.UploadFile, courseId int) (err error) {
-//	if gfile.ExtName(uploadFile.Filename) != "csv" {
-//		return code.UnSupportUploadTypeError
-//	}
-//	file, err := uploadFile.Open()
-//	if err != nil {
-//		return err
-//	}
-//	defer func(file multipart.File) {
-//		_ = file.Close()
-//	}(file)
-//	// 转格式，去bom头
-//	removeBomReader, err := utils.RemoveBom(file)
-//	if err != nil {
-//		return err
-//	}
-//	reader := csv.NewReader(removeBomReader)
-//	csvData, err := reader.ReadAll()
-//	if err != nil {
-//		return err
-//	}
-//	// 开启事务
-//	tx, err := g.DB().Begin()
-//	if err != nil {
-//		return err
-//	}
-//	// 开启事务
-//	defer func() {
-//		if err != nil {
-//			_ = tx.Rollback()
-//		} else {
-//			_ = tx.Commit()
-//		}
-//	}()
-//	for i, row := range csvData {
-//		// 表头不读
-//		if i == 0 {
-//			continue
-//		}
-//		num, realName, class, major := row[0], row[1], row[2], row[3]
-//		// 用学校域名邮箱修改
-//		email := fmt.Sprintf("%s@%s", num, g.Cfg().GetString("email.domain"))
-//		// 找一下该账号是否已存在
-//		newStudent := &model.SysUser{}
-//		if err = dao.SysUser.TX(tx).WherePri(dao.SysUser.Columns.UserNum, num).Fields(dao.SysUser.Columns.UserId).
-//			Scan(&newStudent); err != nil {
-//			return err
-//		}
-//		var stuId int64
-//		// 用户不在，帮他注册
-//		if newStudent == nil {
-//			// 密码加密,用学号当密码
-//			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(num), bcrypt.DefaultCost)
-//			if err != nil {
-//				return err
-//			}
-//			type UserData struct {
-//				Email        string `valid:"required|email#邮箱不能为空|邮箱字段不符合格式"`
-//				Num          string `valid:"required|integer#学号不能为空|学号格式不正确"`
-//				RealName     string `valid:"required#邮箱不能为空"`
-//				Organization string `valid:"required#班级不能为空"`
-//				Major        string
-//				Password     string `valid:"password#密码不符合强度"`
-//			}
-//			userData := &UserData{
-//				Email:        email,
-//				Num:          num,
-//				RealName:     realName,
-//				Organization: class,
-//				Major:        major,
-//				Password:     string(hashedPassword),
-//			}
-//			// 这里有个不知道什么bug，必须用err2,检查字段是否符合
-//			if err2 := gvalid.CheckStruct(context.TODO(), userData, nil); err2 != nil {
-//				return err2
-//			}
-//			// 保存
-//			stuId, err = dao.SysUser.TX(tx).Data(userData).InsertAndGetId()
-//			if err != nil {
-//				return err
-//			}
-//			// 赋予权限
-//			if _, err = dao.ReUserRole.TX(tx).InsertLab(g.Map{
-//				dao.ReUserRole.Columns.UserId: stuId,
-//				dao.ReUserRole.Columns.RoleId: Student,
-//			}); err != nil {
-//				return err
-//			}
-//		} else {
-//			stuId = int64(newStudent.UserId)
-//		}
-//		// 加入选课表
-//		if _, err = dao.ReCourseUser.TX(tx).Data(g.Map{
-//			dao.ReCourseUser.Columns.UserId:   stuId,
-//			dao.ReCourseUser.Columns.CourseId: courseId,
-//		}).Save(); err != nil {
-//			return err
-//		}
-//		// 还要把签到记录补上
-//		checkInRecordIds, err := dao.CheckinRecord.Where(dao.CheckinRecord.Columns.CourseId, courseId).TX(tx).Value(dao.CheckinRecord.Columns.CheckinRecordId)
-//		if err != nil {
-//			return err
-//		}
-//		data := make([]g.Map, 0)
-//		for _, checkInRecordId := range checkInRecordIds.Ints() {
-//			data = append(data, g.Map{
-//				dao.CheckinDetail.Columns.CheckinRecordId: checkInRecordId,
-//				dao.CheckinDetail.Columns.UserId:          stuId,
-//				dao.CheckinDetail.Columns.IsCheckin:       false,
-//			})
-//		}
-//		if _, err = dao.CheckinDetail.Data(data).TX(tx).Save(); err != nil {
-//			return err
-//		}
-//		// 把作业提交补上
-//		labIds, err := dao.Lab.Where(dao.Lab.Columns.CourseId, courseId).TX(tx).Value(dao.Lab.Columns.LabId)
-//		if err != nil {
-//			return err
-//		}
-//		data = make([]g.Map, 0)
-//		for _, labId := range labIds.Ints() {
-//			data = append(data, g.Map{
-//				dao.LabSubmit.Columns.LabId:  labId,
-//				dao.LabSubmit.Columns.UserId: stuId,
-//			})
-//		}
-//		if _, err = dao.LabSubmit.Data(data).TX(tx).Save(); err != nil {
-//			return err
-//		}
-//	}
-//	return nil
-//}
-
 func (c *courseService) GetCourseDetail(ctx context.Context, courseId int) (resp *define.CourseDetailResp, err error) {
 	resp = &define.CourseDetailResp{}
 	if err = dao.Course.Ctx(ctx).WherePri(courseId).WithAll().Scan(&resp); err != nil {
@@ -341,6 +231,9 @@ func (c *courseService) ListCourseStudentOverview(ctx context.Context, courseId 
 	d := dao.ReCourseUser.Ctx(ctx).Page(ctxPageInfo.Current, ctxPageInfo.PageSize)
 	d = d.Where(dao.ReCourseUser.Columns.CourseId, courseId)
 	total, err := d.Count()
+	if err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -466,6 +359,17 @@ func (c *courseService) IsOpenByTeacherId(ctx context.Context, courseId int) (is
 	}
 	isOpen = count > 0
 	return isOpen, nil
+}
+
+func (c *courseService) CreateCourse(ctx context.Context, req *define.CreateCourseReq) (id int64, err error) {
+	ctxUser := service.Context.Get(ctx).User
+	// 置入教师id
+	req.UserId = ctxUser.UserId
+	// 插入
+	if id, err = dao.Course.Ctx(ctx).Data(req).InsertAndGetId(); err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 func (c *courseService) RemoveStudentFromClass() {

@@ -21,13 +21,14 @@ func init() {
 		group.ALL("/hello", api.Hello.Index)
 	})
 	s.Group("/test", func(group *ghttp.RouterGroup) {
-		group.POST("/", api.Hello.Index)
+		group.GET("/", api.Hello.Index)
 		group.POST("/upload", api.Hello.Index1)
 		group.GET("/start", api.Hello.Index1)
 		group.GET("/stop", api.Hello.Index2)
 	})
 	s.Group("/file", func(group *ghttp.RouterGroup) {
-		group.POST("/upload", api.File.UploadFile)
+		group.POST("/", api.File.UploadFile)
+		group.DELETE("/", api.File.RemoveFile)
 	})
 	s.Group("/common", func(group *ghttp.RouterGroup) {
 		group.POST("/verCode", api.Common.SendVerCode)

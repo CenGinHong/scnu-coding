@@ -12,31 +12,31 @@ import (
 
 // LabCommentDao is the manager for logic model data accessing and custom defined data operations functions management.
 type LabCommentDao struct {
-	Table   string          // Table is the underlying table name of the DAO.
-	Group   string          // Group is the database configuration group name of current DAO.
+	Table   string            // Table is the underlying table name of the DAO.
+	Group   string            // Group is the database configuration group name of current DAO.
 	Columns LabCommentColumns // Columns is the short type for Columns, which contains all the column names of Table for convenient usage.
 }
 
 // LabCommentColumns defines and stores column names for table lab_comment.
 type LabCommentColumns struct {
-	CommentId    string // 主键                 
-    LabId        string // 实验id               
-    CommentText  string // 评论内容，限120字    
-    Pid          string // 父评论id，主评时为0  
-    UserId       string // 发评论的用户id       
-    CreatedAt    string // 创建时间             
-    UpdatedAt    string // 更新时间
+	LabCommentId string // 主键
+	LabId        string // 实验id
+	CommentText  string // 评论内容，限120字
+	Pid          string // 父评论id，主评时为0
+	UserId       string // 发评论的用户id
+	CreatedAt    string // 创建时间
+	UpdatedAt    string // 更新时间
 }
 
 //  labCommentColumns holds the columns for table lab_comment.
 var labCommentColumns = LabCommentColumns{
-	CommentId:   "comment_id",    
-            LabId:       "lab_id",        
-            CommentText: "comment_text",  
-            Pid:         "pid",           
-            UserId:      "user_id",       
-            CreatedAt:   "created_at",    
-            UpdatedAt:   "updated_at",
+	LabCommentId: "lab_comment_id",
+	LabId:        "lab_id",
+	CommentText:  "comment_text",
+	Pid:          "pid",
+	UserId:       "user_id",
+	CreatedAt:    "created_at",
+	UpdatedAt:    "updated_at",
 }
 
 // NewLabCommentDao creates and returns a new DAO object for table data access.

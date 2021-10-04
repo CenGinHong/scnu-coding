@@ -36,7 +36,7 @@ func (c *courseAnnouncementService) InsertCourseAnnouncement(ctx context.Context
 // @return err
 // @date 2021-05-08 09:26:04
 func (c *courseAnnouncementService) UpdateCourseAnnouncement(ctx context.Context, req *define.UpdateCourseAnnouncementReq) (err error) {
-	if _, err = dao.CourseAnnouncement.Ctx(ctx).WherePri(req.CourseAnnouncementId).Update(req); err != nil {
+	if _, err = dao.CourseAnnouncement.Ctx(ctx).OmitNilData().WherePri(req.CourseAnnouncementId).Update(req); err != nil {
 		return err
 	}
 	return nil
@@ -60,6 +60,13 @@ func (c *courseAnnouncementService) ListCourseAnnouncement(ctx context.Context, 
 	records := make([]*define.CourseAnnouncementListResp, 0)
 	if err = d.Page(ctxPageInfo.Current, ctxPageInfo.PageSize).OrderDesc(dao.CourseAnnouncement.Columns.CreatedAt).WithAll().Scan(&records); err != nil {
 		return nil, err
+	}
+	// 拼接地址
+	addr := service.File.GetMinioAddr(ctx)
+	for _, record := range records {
+		if record.AttachmentSrc != "" {
+			record.AttachmentSrc = addr + "/" + record.AttachmentSrc
+		}
 	}
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil

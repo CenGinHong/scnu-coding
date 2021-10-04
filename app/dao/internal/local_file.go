@@ -12,28 +12,17 @@ import (
 
 // LocalFileDao is the manager for logic model data accessing and custom defined data operations functions management.
 type LocalFileDao struct {
-	Table   string          // Table is the underlying table name of the DAO.
-	Group   string          // Group is the database configuration group name of current DAO.
+	Table   string           // Table is the underlying table name of the DAO.
+	Group   string           // Group is the database configuration group name of current DAO.
 	Columns LocalFileColumns // Columns is the short type for Columns, which contains all the column names of Table for convenient usage.
 }
 
 // LocalFileColumns defines and stores column names for table local_file.
 type LocalFileColumns struct {
-	LocalFileId  string //           
-    Filename     string // 文件名    
-    Size         string // 文件大小  
-    Url          string // 文件url   
-    ContentType  string // 文件类型
 }
 
 //  localFileColumns holds the columns for table local_file.
-var localFileColumns = LocalFileColumns{
-	LocalFileId: "local_file_id",  
-            Filename:    "filename",       
-            Size:        "size",           
-            Url:         "url",            
-            ContentType: "content_type",
-}
+var localFileColumns = LocalFileColumns{}
 
 // NewLocalFileDao creates and returns a new DAO object for table data access.
 func NewLocalFileDao() *LocalFileDao {

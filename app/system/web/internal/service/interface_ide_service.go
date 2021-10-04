@@ -101,8 +101,8 @@ func getDockerEnvMount(languageEnum int) (environmentMount string) {
 // @params labId
 // @return err
 // @date 2021-04-17 00:46:24
-func removeIdePort(languageEnum int, userId int, labId int) (err error) {
-	key := fmt.Sprintf("%d-%d-%d", languageEnum, userId, labId)
+func removeIdePort(userId int, labId int) (err error) {
+	key := fmt.Sprintf("%d-%d", userId, labId)
 	// 删除stat
 	if _, err = idePortCache.Remove(key); err != nil {
 		return err
@@ -118,7 +118,7 @@ func removeIdePort(languageEnum int, userId int, labId int) (err error) {
 // @return err
 // @date 2021-05-03 00:05:31
 func getIdePort(req *define.OpenIDEReq) (port int, err error) {
-	key := fmt.Sprintf("%d-%d-%d", req.LanguageEnum, req.UserId, req.LabId)
+	key := fmt.Sprintf("%d-%d", req.UserId, req.LabId)
 	data, err := idePortCache.GetVar(key)
 	if err != nil {
 		return 0, err
@@ -138,7 +138,7 @@ func getIdePort(req *define.OpenIDEReq) (port int, err error) {
 // @return err
 // @date 2021-04-17 00:47:21
 func setIdePort(req *define.OpenIDEReq, port int) (err error) {
-	key := fmt.Sprintf("%d-%d-%d", req.LanguageEnum, req.UserId, req.LabId)
+	key := fmt.Sprintf("%d-%d", req.UserId, req.LabId)
 	if err = idePortCache.Set(key, port, 0); err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func execGetAvailablePort() (randPort int, err error) {
 	return randPort, nil
 }
 
-func clearAllIde(removeIdeF func(languageEnum int, userId int, labId int) (err error)) {
+func clearAllIde(removeIdeF func(userId int, labId int) (err error)) {
 	// 上锁
 	ideLock.Lock()
 	defer ideLock.UnLock()
@@ -180,12 +180,12 @@ func clearAllIde(removeIdeF func(languageEnum int, userId int, labId int) (err e
 				defer wg.Done()
 				gstr.TrimStr(key, "myIde-")
 				split := gstr.Split(key, "-")
-				languageEnum, Id, labId := gconv.Int(split[0]), gconv.Int(split[1]), gconv.Int(split[2])
-				if err = removeIdeF(languageEnum, Id, labId); err != nil {
+				Id, labId := gconv.Int(split[0]), gconv.Int(split[1])
+				if err = removeIdeF(Id, labId); err != nil {
 					g.Log().Error(err)
 				}
 				// 移除缓存
-				_ = removeIdePort(languageEnum, Id, labId)
+				_ = removeIdePort(Id, labId)
 			}(containerName)
 		}
 	}
@@ -201,7 +201,7 @@ func getWorkspacePathLocal(params ...string) (workspacePath string) {
 	return workspacePath
 }
 
-func getWorkspacePathRemote(params ...string) (workspacePath string) {
+func getWorkspacePathMounted(params ...string) (workspacePath string) {
 	workspaceBasePathRemote := g.Cfg().GetString("ide.storage.workspaceBasePathRemote")
 	workspacePath = path.Join(workspaceBasePathRemote, "codespaces")
 	for _, param := range params {

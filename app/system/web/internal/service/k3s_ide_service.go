@@ -36,7 +36,7 @@ func (receiver *k3sTheiaService) OpenTheia(ctx context.Context, userId int, labI
 	//if labId == 0 {
 	//	languageEnum = 0
 	//} else {
-	//	languageEnum, err = getLanguageEnumByLabId(labId)
+	//	languageEnum, err = GetLanguageEnumByLabId(labId)
 	//	if err != nil {
 	//		return "", err
 	//	}
@@ -116,8 +116,8 @@ func (receiver *k3sTheiaService) execRunTheiaDeployment(ctx context.Context, Id 
 	split := gstr.Split(imageName, ":")
 	repository := split[0]
 	tag := split[1]
-	mountWorkSpaceRemote := getWorkspacePathRemote(strconv.Itoa(Id), strconv.Itoa(labId))
-	mountEnvRemote := getWorkspacePathRemote(strconv.Itoa(Id), fmt.Sprintf(".env-%d", languageEnum))
+	mountWorkSpaceRemote := getWorkspacePathMounted(strconv.Itoa(Id), strconv.Itoa(labId))
+	mountEnvRemote := getWorkspacePathMounted(strconv.Itoa(Id), fmt.Sprintf(".env-%d", languageEnum))
 	// 预建文件夹
 	if err = receiver.execMkDir(mountWorkSpaceRemote); err != nil {
 		return 0, err
@@ -130,7 +130,7 @@ func (receiver *k3sTheiaService) execRunTheiaDeployment(ctx context.Context, Id 
 	// 目前暂定的规则是，仅当用户本身为学生而且打算打开一个过期的实验时会没有写权限
 	if ctxUser.RoleId == role.STUDENT {
 		// 查询截止日期
-		ddl, err := dao.Lab.Ctx(ctx).WherePri(labId).Value(dao.Lab.Columns.DeadLine)
+		ddl, err := dao.Lab.Ctx(ctx).WherePri(labId).Value(dao.Lab.Columns.Deadline)
 		if err != nil {
 			return 0, err
 		}

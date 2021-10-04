@@ -7,6 +7,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"scnu-coding/app/dao"
 	"scnu-coding/app/system/web/internal/define"
 	"scnu-coding/app/utils"
 	"strconv"
@@ -51,15 +52,14 @@ func (d *dockerTheiaService) OpenTheia(ctx context.Context, req *define.OpenIDER
 		// 关闭之前可能开启的容器
 		if err = d.execStopAndRemoveTheiaDocker(ctx, &define.CloseIDEReq{
 			IDEIdentifier: define.IDEIdentifier{
-				UserId:       req.UserId,
-				LanguageEnum: req.LanguageEnum,
-				LabId:        req.LabId,
+				UserId: req.UserId,
+				LabId:  req.LabId,
 			},
 		}); err != nil {
 			return "", err
 		}
 		// 之前的已经关闭,重新开一个新的容器,并存入缓存
-		port, err = d.execRunTheiaDocker(req)
+		port, err = d.execRunTheiaDocker(ctx, req)
 		if err != nil {
 			return "", err
 		}
@@ -84,17 +84,17 @@ func (d *dockerTheiaService) removeIDE(ctx context.Context, req *define.CloseIDE
 // execStopAndRemoveTheiaDocker 执行删除并移除容器
 // @receiver s
 // @params userId
-// @params language
+// @params language_enum
 // @params labId
 // @return err
 // @date 2021-03-06 22:19:38
 func (d *dockerTheiaService) execStopAndRemoveTheiaDocker(ctx context.Context, req *define.CloseIDEReq) (err error) {
 	// 停止容器
-	cmd := fmt.Sprintf("docker stop myIde-%d-%d-%d", req.LanguageEnum, req.UserId, req.LabId)
+	cmd := fmt.Sprintf("docker stop myIde-%d-%d", req.UserId, req.LabId)
 	// 这里的操作时关闭容器，有时候容器因为某些原因本来就已经关闭，这时候会报错。但目的一样就不必理会
 	_, _ = utils.DeploymentSsh.ExecCmd(cmd)
 	// 删除容器
-	cmd = fmt.Sprintf("docker rm myIde-%d-%d-%d", req.LanguageEnum, req.UserId, req.LabId)
+	cmd = fmt.Sprintf("docker rm myIde-%d-%d", req.UserId, req.LabId)
 	// 不handle error的原因同上
 	_, _ = utils.DeploymentSsh.ExecCmd(cmd)
 	return nil
@@ -110,52 +110,92 @@ func (d *dockerTheiaService) execStopAndRemoveTheiaDocker(ctx context.Context, r
 // @return port
 // @return err
 // @date 2021-05-08 23:40:56
-func (d *dockerTheiaService) execRunTheiaDocker(req *define.OpenIDEReq) (port int, err error) {
+func (d *dockerTheiaService) execRunTheiaDocker(ctx context.Context, req *define.OpenIDEReq) (port int, err error) {
 	// 得到可用端口
 	port, err = execGetAvailablePort()
 	if err != nil {
 		return 0, err
 	}
+	languageEnum := 0
+	if req.LabId > 0 {
+		courseId, err := dao.Lab.Ctx(ctx).Cache(0).WherePri(req.LabId).Value(dao.Lab.Columns.CourseId)
+		if err != nil {
+			return 0, err
+		}
+		languageType, err := dao.Course.Ctx(ctx).Cache(0).WherePri(courseId).Value(dao.Course.Columns.LanguageType)
+		if err != nil {
+			return 0, err
+		}
+		languageEnum = languageType.Int()
+	} else {
+		languageEnum = -req.LabId
+	}
 	// 镜像地址
-	imageName := getImageName(req.LanguageEnum)
+	imageName := getImageName(languageEnum)
 	// 是否可编辑
 	isEditAble := ""
 	if req.IsEditAble {
 		isEditAble = "-u root"
 	}
 	// 挂载路径
-	mountWorkSpace := getWorkspacePathRemote(strconv.Itoa(req.MountedUserId), strconv.Itoa(req.LabId))
+	mountedWorkspaceLocal := getWorkspacePathMounted(strconv.Itoa(req.MountedUserId), strconv.Itoa(req.LabId))
 	// 环境路径
-	mountEnvLocal := getWorkspacePathRemote(strconv.Itoa(req.MountedUserId), fmt.Sprintf(".env-%d", req.LanguageEnum))
+	mountEnvLocal := getWorkspacePathMounted(strconv.Itoa(req.UserId), fmt.Sprintf(".env-%d", languageEnum))
 	// 容器内的环境路径
-	mountEnvDocker := getDockerEnvMount(req.LanguageEnum)
-	memoryLimit := g.Cfg().GetString("ide.image.memoryLimit")
+	mountEnvDocker := getDockerEnvMount(languageEnum)
+	ip := "localhost"
+	//ip, err := service.Common.GetIp()
+	if err != nil {
+		return 0, err
+	}
+	memoryLimit := g.Cfg().GetString("ide.config.memoryLimit")
 	cmd := fmt.Sprintf(
 		// 设端口
-		"docker run -itd --memory %s --init -p %d:3000 "+
-			"%s "+
-			"-v %s:/home/project "+
+		"docker run -itd "+
+			// 内存限制
+			"-m %s "+
+			"--init "+
+			// 端口初始化
+			"-p %d:3000 "+
+			// 用户ID
+			"-e USERID=%d "+
+			// 实验id
+			"-e LABID=%d "+
+			// 回传的地址
+			"-e BACKEND_URL=%s "+
+			// 关掉的地址
+			"-e SHUTDOWN_URL=%s "+
 			// 工作目录挂载
-			"-v %s:%s "+
+			"-v %s:/home/project "+
 			// 环境目录挂载
-			"--name=myIde-%d-%d-%d "+
-			// 命名，例如myIde-2-56-12,，56是userId,12是labId
+			"-v %s:%s "+
+			// 是否可编辑
+			"%s "+
+			// 命名，例如myIde-56-12,，56是userId,12是labId
+			"--name=myIde-%d-%d "+
+			// image
 			"%s",
-		// 语言版本
-		memoryLimit,
 		// 内存限制
+		memoryLimit,
+		// 外置端口
 		port,
-		isEditAble,
-		mountWorkSpace,
-		// 主机上的工作目录
+		req.UserId,
+		req.LabId,
+		// 回访地址
+		ip+g.Cfg().GetString("server.RealAddress")+"/web/ide/alive",
+		ip+g.Cfg().GetString("server.RealAddress")+"/web/ide/alive",
+		// 挂载目录
+		mountedWorkspaceLocal,
+		// 环境目录
 		mountEnvLocal,
-		// ide的环境目录
-		mountEnvDocker,
 		// docker里的环境目录
-		req.LanguageEnum, req.UserId, req.LabId,
-		// 名字里用于做标识
+		mountEnvDocker,
+		// 是否可编辑
+		isEditAble,
+		// 环境目录
+		req.UserId, req.LabId,
+		// image
 		imageName,
-		// ide的名称
 	)
 	// 启动容器
 	if _, err = utils.DeploymentSsh.ExecCmd(cmd); err != nil {
@@ -172,11 +212,11 @@ func (d *dockerTheiaService) execRunTheiaDocker(req *define.OpenIDEReq) (port in
 // @return isExist
 // @date 2021-04-17 00:39:59
 func (d *dockerTheiaService) execIsContainerAlive(req *define.OpenIDEReq) (isExist bool) {
-	cmd := fmt.Sprintf("docker ps --filter name=myIde-%d-%d-%d ", req.LanguageEnum, req.UserId, req.LabId)
+	cmd := fmt.Sprintf("docker ps --filter name=myIde-%d-%d ", req.UserId, req.LabId)
 	output, err := utils.DeploymentSsh.ExecCmd(cmd)
 	if err != nil {
 		return false
 	}
 	// 是否存在
-	return gstr.ContainsI(output, fmt.Sprintf("myIde-%d-%d-%d", req.LanguageEnum, req.UserId, req.LabId))
+	return gstr.ContainsI(output, fmt.Sprintf("myIde-%d-%d", req.UserId, req.LabId))
 }

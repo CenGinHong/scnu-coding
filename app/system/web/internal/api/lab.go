@@ -24,6 +24,18 @@ func (l *labApi) ListLabByCourseId(r *ghttp.Request) {
 	response.Succ(r, resp)
 }
 
+func (l labApi) InsertLab(r *ghttp.Request) {
+	var req *define.InsertLabReq
+	if err := r.Parse(&req); err != nil {
+		response.Exit(r, err)
+	}
+	id, err := service.Lab.InsertLab(r.Context(), req)
+	if err != nil {
+		response.Exit(r, err)
+	}
+	response.Succ(r, id)
+}
+
 //func (l *labApi) InsertLab(r *ghttp.Request) {
 //	var req *define.InsertLabReq
 //	if err := r.Parse(&req); err != nil {
@@ -46,15 +58,6 @@ func (l *labApi) UpdateLab(r *ghttp.Request) {
 	response.Succ(r, true)
 }
 
-//func (receiver *labApi) GetOne(r *ghttp.Request) {
-//	labId := r.GetInt("labId")
-//	resp, err := service.Lab.GetOne(labId)
-//	if err != nil {
-//		response.Exit(r, err)
-//	}
-//	response.Succ(r, resp)
-//}
-
 func (l *labApi) DeleteLab(r *ghttp.Request) {
 	labId := r.GetInt("labId")
 	// 查看开实验的人是不是用户
@@ -63,45 +66,3 @@ func (l *labApi) DeleteLab(r *ghttp.Request) {
 	}
 	response.Succ(r, true)
 }
-
-//
-//func (receiver *labApi) ListByToken(r *ghttp.Request) {
-//	var req *model.ListLabByTokenReq
-//	if err := r.Parse(&req); err != nil {
-//		response.Exit(r, err)
-//	}
-//	req.StuID = r.GetCtxVar(dao.SysUser.Columns.StuID).Int()
-//	resp, err := service.Lab.ListByToken(req)
-//	if err != nil {
-//		response.Exit(r, err)
-//	}
-//	response.Succ(r, resp)
-//}
-
-//func (receiver *labApi) CheckCode(r *ghttp.Request) {
-//	var req *model.CheckCodeReq
-//	if err := r.Parse(&req); err != nil {
-//		response.Exit(r, err)
-//	}
-//	req.TeacherId = r.GetCtxVar(dao.SysUser.Columns.StuID).Int()
-//	url, err := ide.Ide.CheckCode(req)
-//	if err != nil {
-//		response.Exit(r, err)
-//	}
-//	response.Succ(r, g.Map{"url": url})
-//}
-
-//func (receiver labApi) ListLabScore(r *ghttp.Request) {
-//	var req *model.ListLabScoreReq
-//	if err := r.Parse(&req); err != nil {
-//		response.Exit(r, err)
-//	}
-//	if req.StuID == 0 {
-//		req.StuID = r.GetCtxVar(dao.SysUser.Columns.StuID).Int()
-//	}
-//	resp, err := service.Lab.ListLabScore(req)
-//	if err != nil {
-//		return
-//	}
-//	response.Succ(r, resp)
-//}

@@ -6,25 +6,17 @@ package define
 
 type OpenIDEReq struct {
 	IDEIdentifier
-	//UserId        int  // 打开IDE的用户
-	//LanguageEnum  int  // 语言版本
-	//LabId         int  // 实验id
 	IsEditAble    bool // 是否可写
 	MountedUserId int  // 被挂载工作空间的用户
 }
 
 type IDEIdentifier struct {
 	UserId int
-	LabId int
-	LanguageEnum int
-	//IsEditable  bool
+	LabId  int
 }
 
 type CloseIDEReq struct {
 	IDEIdentifier
-	//UserId       int
-	//LabId        int
-	//LanguageEnum int
 }
 
 //type CheckCodeReq struct {

@@ -5,7 +5,6 @@ package response
 // @Description:
 
 import (
-	"github.com/gogf/gf/errors/gerror"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/util/gconv"
@@ -58,7 +57,7 @@ func Succ(r *ghttp.Request, data ...interface{}) {
 		respData = data[0]
 	}
 	_ = r.Response.WriteJson(&JsonResponse{
-		Code:    gerror.CodeOk,
+		Code:    0,
 		Message: "执行成功",
 		Data:    respData,
 	})

@@ -1,7 +1,12 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
+	"github.com/gogf/gf/database/gdb"
+	"github.com/gogf/gf/errors/gcode"
+	"github.com/gogf/gf/errors/gerror"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/os/gfile"
 	"github.com/gogf/gf/text/gstr"
@@ -9,8 +14,12 @@ import (
 	"scnu-coding/app/model"
 	"scnu-coding/app/service"
 	"scnu-coding/app/system/web/internal/define"
+	"scnu-coding/app/utils"
+	"scnu-coding/library/enum/language_enum"
+	"scnu-coding/library/response"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // @Author: 陈健航
@@ -52,9 +61,6 @@ func (l *labSummitService) GetReportContent(ctx context.Context, req *define.Get
 	if req.UserId == 0 {
 		req.UserId = ctxUser.UserId
 	}
-	//if ctxUser.RoleId == role.STUDENT {
-	//	req.UserId = ctxUser.UserId
-	//}
 	value, err := dao.LabSubmit.Ctx(ctx).Where(g.Map{
 		dao.LabSubmit.Columns.UserId: req.UserId,
 		dao.LabSubmit.Columns.LabId:  req.LabId,
@@ -70,14 +76,14 @@ func (l *labSummitService) GetReportContent(ctx context.Context, req *define.Get
 	return reportContent, nil
 }
 
-// GetReportContentAndCode 教师检查代码用
+// GetSubmitCode 教师检查代码用
 // @receiver l *labSummitService
 // @param ctx context.Context
 // @param labSubmitId int
 // @return resp *define.GetReportContentAndCodeResp
 // @return err error
 // @date 2021-08-12 23:18:26
-func (l *labSummitService) GetReportContentAndCode(ctx context.Context, labSubmitId int) (resp *define.GetReportContentAndCodeResp, err error) {
+func (l *labSummitService) GetSubmitCode(ctx context.Context, labSubmitId int) (resp *define.GetReportContentAndCodeResp, err error) {
 	labSubmit := &model.LabSubmit{}
 	value, err := dao.LabSubmit.Ctx(ctx).WherePri(labSubmitId).Fields(dao.LabSubmit.Columns.ReportContent, dao.LabSubmit.Columns.UserId, dao.LabSubmit.Columns.LabId).One()
 	if err != nil {
@@ -88,7 +94,7 @@ func (l *labSummitService) GetReportContentAndCode(ctx context.Context, labSubmi
 	}
 	resp = &define.GetReportContentAndCodeResp{}
 	resp.ReportContent = labSubmit.ReportContent
-	if resp.Code, err = l.readCodeData(ctx, &define.ReadCodeDataReq{
+	if resp.Code, err = l.GetCodeData(ctx, &define.ReadCodeDataReq{
 		LabId: labSubmit.LabId,
 		StuId: labSubmit.UserId,
 	}); err != nil {
@@ -117,11 +123,53 @@ func (l *labSummitService) UpdateFinishStat(ctx context.Context, req *define.Upd
 	return nil
 }
 
-func (l *labSummitService) ListLabSummit(ctx context.Context, labId int) (resp []*define.ListLabSubmitResp, err error) {
-	resp = make([]*define.ListLabSubmitResp, 0)
-	d := dao.LabSubmit.Ctx(ctx)
-	d = d.Where(dao.LabSubmit.Columns.LabId, labId)
+func (l *labSummitService) ListLabSummit(ctx context.Context, labId int) (resp *response.PageResp, err error) {
+	ctxPageInfo := service.Context.Get(ctx).PageInfo
+	records := make([]*define.ListLabSubmitResp, 0)
+	courseId, err := dao.Lab.Ctx(ctx).Cache(0).WherePri(labId).Value(dao.Lab.Columns.CourseId)
+	if err != nil {
+		return nil, err
+	}
+	// 找出所有选课的学生
+	d := dao.ReCourseUser.Ctx(ctx)
+	d = d.Where(dao.ReCourseUser.Columns.CourseId, courseId)
+	total, err := d.Count()
+	if err != nil {
+		return nil, err
+	}
+	if ctxPageInfo != nil {
+		d = d.Page(ctxPageInfo.Current, ctxPageInfo.PageSize)
+	}
+	if err = d.WithAll().Scan(&records); err != nil {
+		return nil, err
+	}
+	if err = dao.LabSubmit.Ctx(ctx).Where(dao.LabSubmit.Columns.LabId, labId).Where(dao.LabSubmit.Columns.UserId,
+		gdb.ListItemValuesUnique(records, "UserId")).Fields(define.ListLabSubmitResp{}.LabSubmitDetail).
+		ScanList(&records, "LabSubmitDetail", "user_id:UserId"); err != nil {
+		return nil, err
+	}
+	resp = response.GetPageResp(records, total, nil)
+	return resp, nil
+}
+
+func (l *labSummitService) ListLabSummitId(ctx context.Context, labId int) (resp []*define.ListLabSubmitIdResp, err error) {
+	resp = make([]*define.ListLabSubmitIdResp, 0)
+	courseId, err := dao.Lab.Ctx(ctx).Cache(0).WherePri(labId).Value(dao.Lab.Columns.CourseId)
+	if err != nil {
+		return nil, err
+	}
+	// 找出所有选课的学生
+	d := dao.ReCourseUser.Ctx(ctx)
+	d = d.Where(dao.ReCourseUser.Columns.CourseId, courseId)
+	if err != nil {
+		return nil, err
+	}
 	if err = d.WithAll().Scan(&resp); err != nil {
+		return nil, err
+	}
+	if err = dao.LabSubmit.Ctx(ctx).Where(dao.LabSubmit.Columns.LabId, labId).Where(dao.LabSubmit.Columns.UserId,
+		gdb.ListItemValuesUnique(resp, "UserId")).Fields(define.ListLabSubmitResp{}.LabSubmitDetail).
+		ScanList(&resp, "LabSubmitDetail", "user_id:UserId"); err != nil {
 		return nil, err
 	}
 	return resp, nil
@@ -133,7 +181,10 @@ func (l *labSummitService) ListLabSummit(ctx context.Context, labId int) (resp [
 // @return err
 // @date 2021-04-21 10:19:20
 func (l *labSummitService) UpdateScoreAndComment(ctx context.Context, req *define.UpdateLabSummitScoreAndCommentReq) (err error) {
-	if _, err = dao.LabSubmit.Ctx(ctx).WherePri(req.LabSubmitId).Data(g.Map{
+	if _, err = dao.LabSubmit.Ctx(ctx).Where(g.Map{
+		dao.LabSubmit.Columns.UserId: req.UserId,
+		dao.LabSubmit.Columns.LabId:  req.LabId,
+	}).Data(g.Map{
 		dao.LabSubmit.Columns.LabSubmitComment: req.Comment,
 		dao.LabSubmit.Columns.Score:            req.Score,
 	}).Update(); err != nil {
@@ -142,79 +193,133 @@ func (l *labSummitService) UpdateScoreAndComment(ctx context.Context, req *defin
 	return nil
 }
 
-////// execPlagiarismCheckByMoss 执行moss
-////// @params basePath
-////// @params languageEnum
-////// @params userIds
-////// @params labId
-////// @return url
-////// @return err
-////// @date 2021-04-17 00:47:40
-////func (receiver *labSummitService) execPlagiarismCheckByMoss(languageEnum int, userIds []gdb.Value, labId int) (url string, err error) {
-////	// 组织cmd
-////	var language string
-////	var ext []string
-////	switch languageEnum {
-////	case 1:
-////		language = "cc"
-////		ext = append(ext, "*.cpp", "*.h", "*.c")
-////	case 2:
-////		language = "java"
-////		ext = append(ext, "*.java")
-////	case 3:
-////		language = "python"
-////		ext = append(ext, "*.py")
-////	default:
-////		return "", code.UnSupportLanguageTypeError
-////	}
-////	// 新建所有的
-////	mossClient, err := utils.NewMossClient(language, g.Cfg().GetString("moss.userId"))
-////	if err != nil {
-////		return "", err
-////	}
-////	// 这个是后端服务中挂载的代码存储主机上的路径
-////	workspaceBasePathLocal := g.Cfg().GetString("ide.workspaceBasePathLocal")
-////	gfile.ScanDirFileFunc(path.Join(workspaceBasePathLocal,"codespace"),)
-////	cmdSb := &strings.Builder{}
-////	cmdSb.WriteString(fmt.Sprintf("%s/util/moss -l %s -d ", receiver.workspaceBasePath, language))
-////	for _, v := range userIds {
-////		// 要检查学生目录下是不是有文件夹
-////		filePath := path.Join(
-////			receiver.workspaceBasePath,
-////			"codespaces",
-////			v.String(),
-////			fmt.Sprintf("workspace-%d", labId),
-////			fmt.Sprintf("*.%s", ext),
-////		)
-////		cmd := fmt.Sprintf("if [ -e %s ]; then echo y; fi;", filePath)
-////		output, err := utils.CodeStorageSsh.ExecCmd(cmd)
-////		if err != nil {
-////			return "", err
-////		}
-////		dir := filePath
-////		if output == "" {
-////			dir = ""
-////		}
-////		cmdSb.WriteString(dir)
-////		cmdSb.WriteString(" ")
-////	}
-////	cmd := cmdSb.String()
-////	执行
-////	output, err := utils.CodeStorageSsh.ExecCmd(cmd)
-////	if err != nil {
-////		return "", err
-////	}
-////	// 找出查重后的链接
-////	outputs := gstr.Split(output, "\n")
-////	for _, v := range outputs {
-////		if gstr.HasPrefix(v, "http") {
-////			url = v
-////			break
-////		}
-////	}
-////	return url, err
-////}
-//
+// execPlagiarismCheckByMoss 执行moss
+// @params basePath
+// @params languageEnum
+// @params userIds
+// @params labId
+// @return url
+// @return err
+// @date 2021-04-17 00:47:40
+func (l *labSummitService) execPlagiarismCheckByMoss(ctx context.Context, languageEnum int, userIds []gdb.Value, labId int) (url string, err error) {
+	// 组织cmd
+	var language string
+	var ext []string
+	switch languageEnum {
+	case 1:
+		language = "cc"
+		ext = append(ext, "*.cpp", "*.h", "*.c")
+	case 2:
+		language = "java"
+		ext = append(ext, "*.java")
+	case 3:
+		language = "python"
+		ext = append(ext, "*.py")
+	default:
+		return "", gerror.NewCode(gcode.CodeNotSupported, "暂不支持的语言类型")
+	}
+	// 新建所有的
+	mossClient, err := utils.NewMossClient(language, g.Cfg().GetString("moss.userId"))
+	if err != nil {
+		return "", err
+	}
+	defer func(mossClient *utils.MossClient) {
+		_ = mossClient.Close()
+	}(mossClient)
+	extName := make([]string, 0)
+	courseId, err := dao.Lab.Ctx(ctx).Cache(0).WherePri(labId).Value(dao.Lab.Columns.CourseId)
+	if err != nil {
+		return "", err
+	}
+	languageType, err := dao.Course.Ctx(ctx).Cache(0).WherePri(courseId).Value(dao.Course.Columns.LanguageType)
+	if err != nil {
+		return "", err
+	}
+	languageEnum = languageType.Int()
+	if err != nil {
+		return "", err
+	}
+	switch languageEnum {
+	case language_enum.Cpp:
+		extName = append(extName, "*.h", "*.cpp", "*.c")
+	case language_enum.Java:
+		extName = append(extName, "*.java")
+	case language_enum.Python:
+		extName = append(extName, "*.py")
+	}
+	// 本地放置代码的位置
+	uploadFilePaths := make([]string, 0)
+	for _, userId := range userIds {
+		// 该学生的实验工作目录，注意该目录可能未创建(因为学生还没有开始做实验）
+		path := getWorkspacePathLocal(userId.String(), strconv.Itoa(labId))
+		if !gfile.Exists(path) {
+			continue
+		}
+		// 读出所有文件路径
+		filePath, err := gfile.ScanDirFile(path, gstr.Join(extName, ","), true)
+		if err != nil {
+			return "", err
+		}
+		// 加入比对
+		uploadFilePaths = append(uploadFilePaths, filePath...)
+	}
+	// 上传所有的文件
+	for _, uploadFilePath := range uploadFilePaths {
+		if err = mossClient.UploadFile(uploadFilePath, false); err != nil {
+			return "", err
+		}
+	}
+	// 关闭
+	if err := mossClient.SendQuery(); err != nil {
+		return "", err
+	}
+	res := mossClient.ResultURL
+	return res.String(), err
+	//getWorkspacePathLocal()
+
+	//// 这个是后端服务中挂载的代码存储主机上的路径
+	//workspaceBasePathLocal := g.Cfg().GetString("ide.workspaceBasePathLocal")
+	//gfile.ScanDirFileFunc(path.Join(workspaceBasePathLocal,"codespace"),)
+	//cmdSb := &strings.Builder{}
+	//cmdSb.WriteString(fmt.Sprintf("%s/util/moss -l %s -d ", receiver.workspaceBasePath, language_enum))
+	//for _, v := range userIds {
+	//	// 要检查学生目录下是不是有文件夹
+	//	filePath := path.Join(
+	//		receiver.workspaceBasePath,
+	//		"codespaces",
+	//		v.String(),
+	//		fmt.Sprintf("workspace-%d", labId),
+	//		fmt.Sprintf("*.%s", ext),
+	//	)
+	//	cmd := fmt.Sprintf("if [ -e %s ]; then echo y; fi;", filePath)
+	//	output, err := utils.CodeStorageSsh.ExecCmd(cmd)
+	//	if err != nil {
+	//		return "", err
+	//	}
+	//	dir := filePath
+	//	if output == "" {
+	//		dir = ""
+	//	}
+	//	cmdSb.WriteString(dir)
+	//	cmdSb.WriteString(" ")
+	//}
+	//cmd := cmdSb.String()
+	//执行
+	//output, err := utils.CodeStorageSsh.ExecCmd(cmd)
+	//if err != nil {
+	//	return "", err
+	//}
+	//// 找出查重后的链接
+	//outputs := gstr.Split(output, "\n")
+	//for _, v := range outputs {
+	//	if gstr.HasPrefix(v, "http") {
+	//		url = v
+	//		break
+	//	}
+	//}
+
+}
+
 //// CollectCompilerErrorLog 收集编译错误报告
 //// @receiver receiver
 //// @params labId
@@ -316,13 +421,13 @@ func (l *labSummitService) UpdateScoreAndComment(ctx context.Context, req *defin
 ////	return resp, err
 ////}
 
-// readCodeData 生成代码树，用户快速查看代码
+// GetCodeData 生成代码树，用户快速查看代码
 // @receiver receiver
 // @params req
 // @return resp
 // @return err
 // @date 2021-04-17 00:42:16
-func (l *labSummitService) readCodeData(_ context.Context, req *define.ReadCodeDataReq) (resp []*define.CodeData, err error) {
+func (l *labSummitService) GetCodeData(_ context.Context, req *define.ReadCodeDataReq) (resp []*define.CodeData, err error) {
 	// 只查出这几种类型的代码文件
 	extNames := []string{"*.txt", "*.py", "*.java", "*.cpp", "*.c", "*.h", "*.ts", "*.js"}
 	pathPrefix := getWorkspacePathLocal(strconv.Itoa(req.StuId), strconv.Itoa(req.LabId))
@@ -342,7 +447,7 @@ func (l *labSummitService) readCodeData(_ context.Context, req *define.ReadCodeD
 		go func() {
 			tempCodeFile := &TempCodeFile{
 				Filename: path,
-				Content:  gfile.GetContents(path),
+				Content:  gfile.GetContentsWithCache(path, 5*time.Second),
 			}
 			// 用channel返回
 			retChan <- tempCodeFile
@@ -364,6 +469,45 @@ func (l *labSummitService) readCodeData(_ context.Context, req *define.ReadCodeD
 		l.buildTreeNode(root, fileNameSplit, 0, tempCodeFile.Content)
 	}
 	return root, nil
+}
+
+// buildTreeNode 构建代码树结构
+// @receiver receiver
+// @params root
+// @params path
+// @params index
+// @params content
+// @date 2021-05-04 22:06:44
+func (l *labSummitService) buildTreeNode(childNode []*define.CodeData, path []string, index int, content string) {
+	// 到达叶子节点，该节点是一个文件
+	if index == len(path) {
+		childNode = append(childNode, &define.CodeData{
+			Name:    path[index],
+			Content: content,
+		})
+		return
+	}
+	// 是否存在该层目录
+	isExist := false
+	for _, child := range childNode {
+		if child.Name == path[index] {
+			// 递归构建树
+			l.buildTreeNode(child.ChildNode, path, index+1, content)
+			isExist = true
+			break
+		}
+	}
+	// 不存在，创建该层目录
+	if !isExist {
+		newNode := &define.CodeData{
+			ChildNode: make([]*define.CodeData, 0),
+			Name:      path[index],
+		}
+		// 挂载叶子节点
+		childNode = append(childNode, newNode)
+		// 递归构建树
+		l.buildTreeNode(newNode.ChildNode, path, index+1, content)
+	}
 }
 
 //func (receiver *labSummitService) parsePlagiarismCheck(url string) (records []*model.PlagiarismCheckResp, err error) {
@@ -420,41 +564,57 @@ func (l *labSummitService) readCodeData(_ context.Context, req *define.ReadCodeD
 //	return records, nil
 //}
 
-// buildTreeNode 构建代码树结构
-// @receiver receiver
-// @params root
-// @params path
-// @params index
-// @params content
-// @date 2021-05-04 22:06:44
-func (l *labSummitService) buildTreeNode(childNode []*define.CodeData, path []string, index int, content string) {
-	// 到达叶子节点，该节点是一个文件
-	if index == len(path) {
-		childNode = append(childNode, &define.CodeData{
-			Name:    path[index],
-			Content: content,
-		})
-		return
+func (l *labSummitService) ExportScore(ctx context.Context, req *define.ExportLabScoreReq) (file *bytes.Buffer, err error) {
+	// 学生名单
+	stuRecords := make([]*define.EnrollUserDetail, 0)
+	if err = dao.ReCourseUser.Ctx(ctx).Where(dao.ReCourseUser.Columns.CourseId, req.CourseId).WithAll().
+		Scan(&stuRecords); err != nil {
+		return nil, err
 	}
-	// 是否存在该层目录
-	isExist := false
-	for _, child := range childNode {
-		if child.Name == path[index] {
-			// 递归构建树
-			l.buildTreeNode(child.ChildNode, path, index+1, content)
-			isExist = true
-			break
+	// 所有实验成绩
+	labRecords := make([]*define.ExportLabScore, 0)
+	if err = dao.Lab.Ctx(ctx).WherePri(req.LabIds).WithAll().Scan(&labRecords); err != nil {
+		return nil, err
+	}
+	// 新建csv
+	file = &bytes.Buffer{}
+	utils.WriteBom(file)
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+	headLine := []string{"姓名", "学号"}
+	// 写入表头
+	for _, record := range labRecords {
+		headLine = append(headLine, record.Title)
+	}
+	if err = writer.Write(headLine); err != nil {
+		return nil, err
+	}
+	data := make([][]string, 0)
+	for _, stuRecord := range stuRecords {
+		row := make([]string, 0)
+		row = append(row, stuRecord.UserDetail.Username)
+		row = append(row, stuRecord.UserDetail.UserNum)
+		for _, labRecord := range labRecords {
+			isFound := false
+			for _, labSubmitDetail := range labRecord.LabSubmitDetails {
+				if labSubmitDetail.UserId == stuRecord.UserId {
+					isFound = true
+					if labSubmitDetail.Score != nil {
+						row = append(row, strconv.Itoa(*labSubmitDetail.Score))
+					} else {
+						row = append(row, "未评分")
+					}
+					break
+				}
+			}
+			if !isFound {
+				row = append(row, "未提交")
+			}
 		}
+		data = append(data, row)
 	}
-	// 不存在，创建该层目录
-	if !isExist {
-		newNode := &define.CodeData{
-			ChildNode: make([]*define.CodeData, 0),
-			Name:      path[index],
-		}
-		// 挂载叶子节点
-		childNode = append(childNode, newNode)
-		// 递归构建树
-		l.buildTreeNode(newNode.ChildNode, path, index+1, content)
+	if err = writer.WriteAll(data); err != nil {
+		return nil, err
 	}
+	return file, nil
 }

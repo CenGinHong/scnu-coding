@@ -13,6 +13,12 @@ type helloApi struct{}
 
 // Index is a demonstration route handler for output "Hello World!".
 func (a *helloApi) Index(r *ghttp.Request) {
+	fmt.Println(r.RequestURI)
+	router := r.Server.GetRouterArray()
+	fmt.Println(router)
+	fmt.Println(r.RemoteAddr)
+	fmt.Println(r.GetRemoteIp())
+	fmt.Println(r.Router)
 	type demo struct {
 		Id int
 	}

@@ -28,7 +28,10 @@ func Init() {
 		})
 		group.Group("/ide", func(group *ghttp.RouterGroup) {
 			group.POST("/", api.Ide.OpenIDE)
-			group.POST("/alive", api.Ide.OpenFront)
+			group.Group("/alive", func(group *ghttp.RouterGroup) {
+				group.POST("/", api.Ide.OpenFront)
+				group.DELETE("/", api.Ide.CloseFront)
+			})
 		})
 		group.Group("/checkin", func(group *ghttp.RouterGroup) {
 			group.GET("/student", api.Checkin.StuListCheckinRecords)
@@ -42,6 +45,7 @@ func Init() {
 				group.PUT("/", api.Checkin.CheckIn)
 				group.GET("/", api.Checkin.ListCheckinDetailByCheckInRecordId)
 			})
+			group.GET("/export", api.Checkin.ExportCheckinRecord)
 		})
 		group.Group("/course", func(group *ghttp.RouterGroup) {
 			group.GET("/is-enroll", api.Course.IsCourseEnroll)
@@ -50,6 +54,7 @@ func Init() {
 			group.GET("/:courseId", api.Course.GetCourseDetail)
 			group.GET("/overview", api.Course.ListCourseStudentOverview)
 			group.GET("/search", api.Course.SearchCourseByCourseNameOrTeacherName)
+			group.POST("/", api.Course.CreateCourse)
 			group.Group("/announcement", func(group *ghttp.RouterGroup) {
 				group.POST("/", api.CourseAnnouncement.InsertCourseAnnouncement)
 				group.PUT("/", api.CourseAnnouncement.UpdateCourseAnnouncement)
@@ -59,15 +64,15 @@ func Init() {
 			group.GET("/open", api.Course.IsOpenByTeacherId)
 			group.Group("/student", func(group *ghttp.RouterGroup) {
 				group.POST("/", api.Course.ImportStudent2Class)
-				//group.DELETE("/",api.Course)
 			})
+			group.PUT("/", api.Course.UpdateCourse)
 		})
 		group.Group("/lab", func(group *ghttp.RouterGroup) {
 			group.GET("/", api.Lab.ListLabByCourseId)
 			group.DELETE("/", api.Lab.DeleteLab)
 			group.PUT("/", api.Lab.UpdateLab)
+			group.POST("/", api.Lab.InsertLab)
 		})
-
 		group.Group("/comment", func(group *ghttp.RouterGroup) {
 			group.Group("/course", func(group *ghttp.RouterGroup) {
 				group.GET("/", api.Comment.ListCourseComment)
@@ -80,14 +85,20 @@ func Init() {
 				group.DELETE("/", api.Comment.DeleteLabComment)
 			})
 		})
-
 		group.Group("/submit", func(group *ghttp.RouterGroup) {
+			group.Group("/", func(group *ghttp.RouterGroup) {
+				group.GET("/", api.LabSummit.ListLabSubmit)
+				group.POST("/", api.LabSummit.UpdateScoreAndComment)
+			})
 			group.PUT("/finish", api.LabSummit.UpdateFinishStat)
 			group.Group("/report", func(group *ghttp.RouterGroup) {
 				group.GET("/", api.LabSummit.GetReportContent)
 				group.PUT("/", api.LabSummit.UpdateReportContent)
 			})
-			group.GET("/", api.LabSummit.ListLabSubmit)
+			group.GET("/code", api.LabSummit.GetCode)
+			group.GET("/id", api.LabSummit.ListLabSubmitId)
+			group.POST("/correct", api.LabSummit.UpdateScoreAndComment)
+			group.GET("/export", api.LabSummit.ExportScore)
 		})
 	})
 }

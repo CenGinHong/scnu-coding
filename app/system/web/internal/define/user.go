@@ -12,12 +12,12 @@ type UpdateUserInfoReq struct {
 	Username     string `orm:"username"        json:"username"` // 真实姓名，限6字
 	Grade        int    `orm:"grade"           json:"grade"`    // 年级
 	School       string `orm:"school"          json:"school"`   // 学院
-	OldPassword  string
-	Password     string `orm:"password"        json:"password"`     // 密码
-	AvatarUrl    string `orm:"avatar_url"      json:"avatarUrl"`    // 头像url
-	Gender       int    `orm:"gender"          json:"gender"`       // 性别
-	Major        string `orm:"major"           json:"major"`        // 专业，限15字
-	Organization string `orm:"organization"    json:"organization"` // 单位，例如计算机学院，限15字
+	OldPassword  *string
+	Password     *string `orm:"password"        json:"password"`     // 密码
+	AvatarImg    string  `orm:"avatar_img"      json:"avatarImg"`    // 头像url
+	Gender       int     `orm:"gender"          json:"gender"`       // 性别
+	Major        string  `orm:"major"           json:"major"`        // 专业，限15字
+	Organization string  `orm:"organization"    json:"organization"` // 单位，例如计算机学院，限15字
 	VerCode      string
 }
 
@@ -28,7 +28,7 @@ type GetUserInfoResp struct {
 	Username     string `orm:"username"        json:"username"`     // 真实姓名
 	Grade        int    `orm:"grade"           json:"grade"`        // 年级
 	School       string `orm:"school"          json:"school"`       // 学院
-	AvatarUrl    string `orm:"avatar_url"      json:"avatarUrl"`    // 头像url
+	AvatarImg    string `orm:"avatar_img"      json:"avatarImg"`    // 头像url
 	Gender       int    `orm:"gender"          json:"gender"`       // 性别
 	Major        string `orm:"major"           json:"major"`        // 专业
 	Organization string `orm:"organization"    json:"organization"` // 单位，例如软件工程4班

@@ -5,6 +5,7 @@
 	ServerAgent = "gf-app"
 	LogPath     = "/tmp/log/gf-app/server"
     IsMultiple  = false
+    RealAddress = ":8199"
 
 # Logger.
 [logger]
@@ -25,36 +26,48 @@
         system   = "linux"
         cgo      = 0
     [gfcli.gen.dao]
-        link = "mysql:root:12345678@tcp(localhost:3306)/scnu_coding"
+        link = "mysql:horace:scipio1322?@tcp(localhost:3306)/scnu_coding"
         prefix = ""
-        tables = "local_file,sys_role,re_course_user,re_api_role,re_user_role,log,message_notify,coding_time,course_announcement,checkin_detail,checkin_record,lab,lab_comment,course,course_comment,lab_submit,sys_user"
 [minio]
     endpoint = "localhost:9000"
-    accessKeyID = "root"
-    secretAccessKey = "12345678"
+    accessKeyId = "admin"
+    secretAccessKey = "admin123"
+    bucketName = "scnu-coding"
+    location = "cn-north-1"
 
 [redis]
-    default = "localhost:6379,0,123456"
+    default = "localhost:6379,0,scipio1322?"
 
 [ide]
     # 目前只有两种方式，docker，k3s
     deploymentType = "docker"
     # docker运行的主机
     [ide.deployment.docker]
-        host = "93.179.125.223:27196"
-        user = "root"
-        pass = "TefmYnzGKFVa"
+        host = "localhost"
+        user = "horace"
+        pass = "scipio"
     # k3s master主机
     [ide.deployment.k3s]
         host = "93.179.125.223:27196"
         user = "root"
         pass = "TefmYnzGKFVa"
-    [ide.image]
+    [ide.deployment.swarm]
+        host = "93.179.125.223:27196"
+        user = "root"
+        pass = "TefmYnzGKFVa"
+    # 代码存储的主机，如果是docker环境
+    [ide.storage]
+        host = "localhost"
+        user = "horace"
+        pass = "scipio"
+        workspaceBasePathRemote = "/mnt/code-platform"
+        workspaceBasePathLocal = ""
+    [ide.config]
         chartName = ""
         # 带单位
         memoryLimit = "500m"
     [ide.image.name]
-        cpp = "theiaide/theia-cpp:latest"
+        cpp = "registry.cn-hangzhou.aliyuncs.com/jhchen/theia-cpp:0.04"
         java = "theiaide/theia-java:latest"
         python = "theiaide/theia-python:latest"
         go = "registry.cn-hangzhou.aliyuncs.com/jhchen/theia-go:latest"
@@ -64,20 +77,15 @@
         web = "theiaide/theia:latest"
     [ide.helm]
         chartName = ""
-    [ide.docker]
-        #运行的主机
-        user = "root"
-        host = "93.179.125.223:27196"
-        pass = "TefmYnzGKFVa"
-    [ide.storage]
-        user = "root"
-        host = "93.179.125.223:27196"
-        pass = "TefmYnzGKFVa"
-        workspaceBasePathRemote = "/mnt/code-platform"
-        workspaceBasePathLocal = ""
+#    [ide.docker]
+#        #运行的主机
+#        user = "root"
+#        host = "93.179.125.223:27196"
+#        pass = "TefmYnzGKFVa"
+
 # Database.
 [database]
-    link  = "mysql:root:12345678@tcp(localhost:3306)/scnu_coding"
+    link  = "mysql:horace:scipio1322?@tcp(localhost:3306)/scnu_coding"
     debug = true
     # Database logger.
     [database.logger]

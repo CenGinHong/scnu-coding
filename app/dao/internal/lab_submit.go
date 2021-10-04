@@ -12,35 +12,35 @@ import (
 
 // LabSubmitDao is the manager for logic model data accessing and custom defined data operations functions management.
 type LabSubmitDao struct {
-	Table   string          // Table is the underlying table name of the DAO.
-	Group   string          // Group is the database configuration group name of current DAO.
+	Table   string           // Table is the underlying table name of the DAO.
+	Group   string           // Group is the database configuration group name of current DAO.
 	Columns LabSubmitColumns // Columns is the short type for Columns, which contains all the column names of Table for convenient usage.
 }
 
 // LabSubmitColumns defines and stores column names for table lab_submit.
 type LabSubmitColumns struct {
-	LabSubmitId       string //                                    
-    LabId             string // lab id                             
-    UserId            string // 用户id                             
-    ReportContent     string // 实验报告(md)/存放实验报告pdf的url  
-    IsFinish          string // 是否完成                           
-    Score             string // 分数                               
-    LabSubmitComment  string // 评论                               
-    CreatedAt         string // 创建时间                           
-    UpdatedAt         string // 更新时间
+	LabSubmitId      string //
+	LabId            string // lab id
+	UserId           string // 用户id
+	ReportContent    string // 实验报告(md)/存放实验报告pdf的url
+	Score            string // 分数
+	IsFinish         string // 是否完成
+	LabSubmitComment string // 评论
+	UpdatedAt        string // 更新时间
+	CreatedAt        string // 创建时间
 }
 
 //  labSubmitColumns holds the columns for table lab_submit.
 var labSubmitColumns = LabSubmitColumns{
-	LabSubmitId:      "lab_submit_id",       
-            LabId:            "lab_id",              
-            UserId:           "user_id",             
-            ReportContent:    "report_content",      
-            IsFinish:         "is_finish",           
-            Score:            "score",               
-            LabSubmitComment: "lab_submit_comment",  
-            CreatedAt:        "created_at",          
-            UpdatedAt:        "updated_at",
+	LabSubmitId:      "lab_submit_id",
+	LabId:            "lab_id",
+	UserId:           "user_id",
+	ReportContent:    "report_content",
+	Score:            "score",
+	IsFinish:         "is_finish",
+	LabSubmitComment: "lab_submit_comment",
+	UpdatedAt:        "updated_at",
+	CreatedAt:        "created_at",
 }
 
 // NewLabSubmitDao creates and returns a new DAO object for table data access.

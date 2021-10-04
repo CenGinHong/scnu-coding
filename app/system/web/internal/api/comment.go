@@ -96,7 +96,7 @@ func (c *commentAPI) DeleteCourseComment(r *ghttp.Request) {
 // @params r
 // @date 2021-01-16 00:42:58
 func (c *commentAPI) DeleteLabComment(r *ghttp.Request) {
-	labCommentId := r.GetInt("commentId")
+	labCommentId := r.GetInt("labCommentId")
 	if err := service.Comment.DeleteLabComment(r.Context(), labCommentId); err != nil {
 		response.Exit(r, err)
 	}

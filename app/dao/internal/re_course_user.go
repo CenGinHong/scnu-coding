@@ -12,27 +12,27 @@ import (
 
 // ReCourseUserDao is the manager for logic model data accessing and custom defined data operations functions management.
 type ReCourseUserDao struct {
-	Table   string          // Table is the underlying table name of the DAO.
-	Group   string          // Group is the database configuration group name of current DAO.
+	Table   string              // Table is the underlying table name of the DAO.
+	Group   string              // Group is the database configuration group name of current DAO.
 	Columns ReCourseUserColumns // Columns is the short type for Columns, which contains all the column names of Table for convenient usage.
 }
 
 // ReCourseUserColumns defines and stores column names for table re_course_user.
 type ReCourseUserColumns struct {
-	ReCourseUserId  string // 主键      
-    UserId          string // 用户id    
-    CourseId        string // 课程id    
-    CreatedAt       string // 创建时间  
-    UpdatedAt       string // 更新时间
+	ReCourseUserId string // 主键
+	UserId         string // 用户id
+	CourseId       string // 课程id
+	UpdatedAt      string // 更新时间
+	CreatedAt      string // 创建时间
 }
 
 //  reCourseUserColumns holds the columns for table re_course_user.
 var reCourseUserColumns = ReCourseUserColumns{
-	ReCourseUserId: "re_course_user_id",  
-            UserId:         "user_id",            
-            CourseId:       "course_id",          
-            CreatedAt:      "created_at",         
-            UpdatedAt:      "updated_at",
+	ReCourseUserId: "re_course_user_id",
+	UserId:         "user_id",
+	CourseId:       "course_id",
+	UpdatedAt:      "updated_at",
+	CreatedAt:      "created_at",
 }
 
 // NewReCourseUserDao creates and returns a new DAO object for table data access.

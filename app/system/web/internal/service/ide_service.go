@@ -39,13 +39,7 @@ func newTheiaService() *ideService {
 // @return err error
 // @date 2021-07-17 22:23:46
 func (t *ideService) OpenIDE(ctx context.Context, req *define.OpenIDEReq) (url string, err error) {
-	// 当languageEnum==0，说明在完成某实验，可通过实验所属课程查的语言
-	// 当languageEnum!=0，说明在打开自由工作区IDE
-	if req.LanguageEnum == 0 {
-		if req.LanguageEnum, err = t.getLanguageEnumByLabId(ctx, req.LabId); err != nil {
-			return "", err
-		}
-	}
+	// 若labId<0，说明在打开自由工作区IDE,labId代表当languageEnum的相反数
 	ctxUser := service.Context.Get(ctx).User
 	req.UserId = ctxUser.UserId
 	// 默认挂载到自己的工作区下
@@ -53,7 +47,7 @@ func (t *ideService) OpenIDE(ctx context.Context, req *define.OpenIDEReq) (url s
 		req.MountedUserId = req.UserId
 	}
 	if ctxUser.RoleId == role.STUDENT && req.LabId != 0 {
-		deadline, err := dao.Lab.Ctx(ctx).WherePri(req.LabId).Value(dao.Lab.Columns.DeadLine)
+		deadline, err := dao.Lab.Ctx(ctx).WherePri(req.LabId).Value(dao.Lab.Columns.Deadline)
 		if err != nil {
 			return "", err
 		}
@@ -145,17 +139,11 @@ func (t *ideService) OpenIDE(ctx context.Context, req *define.OpenIDEReq) (url s
 // @return err
 // @date 2021-05-03 00:06:16
 // 注意该请求是由插件发出，没有token携带userId信息
-func (t *ideService) OpenFront(ctx context.Context, languageEnum int, userId int, labId int) (err error) {
-	//获得语言类型
-	if languageEnum == 0 {
-		if languageEnum, err = t.getLanguageEnumByLabId(ctx, labId); err != nil {
-			return err
-		}
-	}
+func (t *ideService) OpenFront(_ context.Context, req *define.IDEIdentifier) (err error) {
 	t.lock.Lock()
 	defer t.lock.UnLock()
 	alive := &aliveStruct{}
-	key := fmt.Sprintf("%d-%d-%d", languageEnum, userId, labId)
+	key := fmt.Sprintf("%d-%d", req.UserId, req.LabId)
 	data, err := t.ideAliveCache.Cache.GetVar(key)
 	if err != nil {
 		return err
@@ -185,16 +173,11 @@ func (t *ideService) OpenFront(ctx context.Context, languageEnum int, userId int
 // @param labID int
 // @return err error
 // @date 2021-07-17 22:25:40
-func (t *ideService) CloseFront(ctx context.Context, req *define.CloseIDEReq) (err error) {
-	if req.LanguageEnum == 0 {
-		if req.LanguageEnum, err = t.getLanguageEnumByLabId(ctx, req.LabId); err != nil {
-			return err
-		}
-	}
+func (t *ideService) CloseFront(ctx context.Context, req *define.IDEIdentifier) (err error) {
 	t.lock.Lock()
 	defer t.lock.UnLock()
 	alive := &aliveStruct{}
-	key := fmt.Sprintf("%d-%d-%d", req.LanguageEnum, req.UserId, req.LabId)
+	key := fmt.Sprintf("%d-%d", req.UserId, req.LabId)
 	data, err := t.ideAliveCache.Cache.GetVar(key)
 	if err != nil {
 		return err
@@ -211,15 +194,14 @@ func (t *ideService) CloseFront(ctx context.Context, req *define.CloseIDEReq) (e
 			return
 		}
 		// 移除端口标识块
-		if err = removeIdePort(req.LanguageEnum, req.UserId, req.LabId); err != nil {
+		if err = removeIdePort(req.UserId, req.LabId); err != nil {
 			g.Log().Error(err)
 		}
 		// 关闭容器
 		if err = t.ide.removeIDE(ctx, &define.CloseIDEReq{
 			IDEIdentifier: define.IDEIdentifier{
-				UserId:       req.UserId,
-				LanguageEnum: req.LanguageEnum,
-				LabId:        req.LabId,
+				UserId: req.UserId,
+				LabId:  req.LabId,
 			},
 		}); err != nil {
 			return
@@ -233,23 +215,12 @@ func (t *ideService) CloseFront(ctx context.Context, req *define.CloseIDEReq) (e
 		}).Insert(); err != nil {
 			g.Log().Error(err)
 		}
+		return nil
+	} else {
+		if err = t.ideAliveCache.Cache.Set(key, alive, 0); err != nil {
+			return err
+		}
+		return nil
 	}
-	if err = t.ideAliveCache.Cache.Set(key, alive, 0); err != nil {
-		return err
-	}
-	return nil
-}
 
-func (t *ideService) getLanguageEnumByLabId(ctx context.Context, labId int) (languageEnum int, err error) {
-	// 查出所用语言
-	courseId, err := dao.Lab.Ctx(ctx).Cache(0).WherePri(labId).Value(dao.Lab.Columns.CourseId)
-	if err != nil {
-		return 0, err
-	}
-	languageEnumV, err := dao.Course.Ctx(ctx).Cache(0).WherePri(courseId.Int()).Value(dao.Course.Columns.LanguageType)
-	if err != nil {
-		return 0, err
-	}
-	languageEnum = languageEnumV.Int()
-	return languageEnum, nil
 }

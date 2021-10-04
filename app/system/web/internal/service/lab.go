@@ -43,7 +43,10 @@ func (l *labService) InsertLab(ctx context.Context, req *define.InsertLabReq) (l
 // @date 2021-08-02 22:01:08
 func (l *labService) ListLabByCourseId(ctx context.Context, courseId int) (resp *response.PageResp, err error) {
 	ctxPageInfo := service.Context.Get(ctx).PageInfo
-	d := dao.Lab.Ctx(ctx).Page(ctxPageInfo.Current, ctxPageInfo.PageSize)
+	d := dao.Lab.Ctx(ctx)
+	if ctxPageInfo != nil {
+		d = d.Page(ctxPageInfo.Current, ctxPageInfo.PageSize)
+	}
 	d = d.Where(dao.Lab.Columns.CourseId, courseId)
 	total, err := d.Count()
 	if err != nil {
@@ -53,6 +56,13 @@ func (l *labService) ListLabByCourseId(ctx context.Context, courseId int) (resp 
 	records := make([]*define.LabDetailResp, 0)
 	if err = d.With(define.LabDetailResp{}.LabSubmitDetail).Scan(&records); err != nil {
 		return nil, err
+	}
+	// 拼接地址
+	addr := service.File.GetMinioAddr(ctx)
+	for _, record := range records {
+		if record.AttachmentSrc != "" {
+			record.AttachmentSrc = addr + "/" + record.AttachmentSrc
+		}
 	}
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil
@@ -65,7 +75,7 @@ func (l *labService) ListLabByCourseId(ctx context.Context, courseId int) (resp 
 // @return err
 // @date 2021-05-05 13:11:21
 func (l *labService) Update(ctx context.Context, req *define.UpdateLabReq) (err error) {
-	if _, err = dao.Lab.Ctx(ctx).WherePri(req.LabId).Update(req); err != nil {
+	if _, err = dao.Lab.Ctx(ctx).OmitNilData().WherePri(req.LabId).Update(req); err != nil {
 		return err
 	}
 	return nil

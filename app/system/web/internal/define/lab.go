@@ -10,11 +10,11 @@ import (
 )
 
 type InsertLabReq struct {
-	CourseId         int         // 该实验隶属的课程
-	Title            string      // 标题
-	Content          string      // 实验内容简介
-	AttachmentFileId int         // 实验附件url
-	DeadLine         *gtime.Time // 截止时间
+	CourseId      int         // 该实验隶属的课程
+	Title         string      // 标题
+	Content       string      // 实验内容简介
+	AttachmentSrc string      // 实验附件url
+	DeadLine      *gtime.Time // 截止时间
 }
 
 type LabDetailResp struct {
@@ -37,26 +37,19 @@ type LabDetailResp struct {
 		Score            int    `orm:"score" json:"score"`                         // 成绩,要用指针
 		LabSubmitComment string `orm:"lab_submit_comment" json:"labSubmitComment"` // 教师对该实验的评论
 	} `orm:"with:lab_id" json:"labSubmitDetail"`
-	AttachmentFileId     int `orm:"attachment_file_id"             json:"-"` // 附件url
-	AttachmentFileDetail *struct {
-		gmeta.Meta  `orm:"table:local_file"`
-		LocalFileId int    `orm:"local_file_id,primary" json:"localFileId"` //
-		Filename    string `orm:"filename"              json:"filename"`    // 文件名
-		Size        int    `orm:"size"                  json:"size"`        // 文件大小
-		Url         string `orm:"url"                   json:"url"`         // 文件url
-		ContentType string `orm:"content_type"          json:"contentType"` // 文件类型
-	} `orm:"with:local_file_id=attachment_file_id" json:"attachmentFileDetail"`
-	DeadLine  *gtime.Time `orm:"dead_line" json:"deadline"`   // 截止时间
-	CreatedAt *gtime.Time `orm:"created_at" json:"createdAt"` // 创建时间
-	UpdatedAt *gtime.Time `orm:"updated_at" json:"updatedAt"` // 修改时间
+	AttachmentSrc string      `orm:"attachment_src" json:"attachmentSrc"` // 实验附件url
+	Type          int         `orm:"type"           json:"type"`          // 枚举，练习，作业，考试
+	Deadline      *gtime.Time `orm:"deadline" json:"deadline"`            // 截止时间
+	CreatedAt     *gtime.Time `orm:"created_at" json:"createdAt"`         // 创建时间
+	UpdatedAt     *gtime.Time `orm:"updated_at" json:"updatedAt"`         // 修改时间
 }
 
 type UpdateLabReq struct {
-	LabId            int         `orm:"lab_id,primary"`     // 主键
-	Title            *string     `orm:"title"`              // 标题
-	Content          *string     `orm:"content"`            // 实验内容描述
-	AttachmentFileId int         `orm:"attachment_file_id"` // 附件url
-	DeadLine         *gtime.Time `orm:"dead_line"`          // 截止时间
+	LabId         int     `orm:"lab_id,primary"` // 主键
+	Title         string  `orm:"title"`          // 标题
+	Content       string  `orm:"content"`        // 实验内容描述
+	AttachmentSrc *string `orm:"attachment_src"` // 实验附件url
+	Deadline      string  `orm:"deadline"`       // 截止时间
 }
 
 type ListOneStudentScore struct {

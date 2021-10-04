@@ -5,14 +5,17 @@ package service
 // @Description:
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"github.com/gogf/gf/database/gdb"
+	"github.com/gogf/gf/errors/gcode"
+	"github.com/gogf/gf/errors/gerror"
 	"github.com/gogf/gf/frame/g"
 	"scnu-coding/app/dao"
 	"scnu-coding/app/service"
 	"scnu-coding/app/system/web/internal/define"
 	"scnu-coding/app/utils"
-	"scnu-coding/library/code"
 	"scnu-coding/library/response"
 	"time"
 )
@@ -22,7 +25,7 @@ var Checkin = checkinService{
 }
 
 type checkinService struct {
-	checkinKeyCache utils.MyCache
+	checkinKeyCache *utils.MyCache
 }
 
 // ListCheckinRecordByCourseId 教师获取签到列表
@@ -74,7 +77,7 @@ func (c *checkinService) ListCheckinRecordByCourseId(ctx context.Context, course
 func (c *checkinService) StartCheckin(ctx context.Context, req *define.StartCheckInReq) (checkinRecordId int64, err error) {
 	checkinRecordId, err = dao.CheckinRecord.Ctx(ctx).Data(g.Map{
 		dao.CheckinRecord.Columns.CheckinKey:  req.CheckinKey,
-		dao.CheckinRecord.Columns.CheckinName: req.Name,
+		dao.CheckinRecord.Columns.CheckinName: req.CheckinName,
 		dao.CheckinRecord.Columns.CourseId:    req.CourseId,
 	}).InsertAndGetId()
 	if err != nil {
@@ -82,7 +85,7 @@ func (c *checkinService) StartCheckin(ctx context.Context, req *define.StartChec
 	}
 	// 存入签到密钥,限时
 	cacheData := &define.RedisCheckinData{
-		CheckinName:     req.Name,
+		CheckinName:     req.CheckinName,
 		CheckinKey:      req.CheckinKey,
 		CheckinRecordId: checkinRecordId,
 		TotalDuration:   req.Duration,
@@ -214,14 +217,14 @@ func (c *checkinService) CheckIn(ctx context.Context, req *define.StudentCheckin
 		return err
 	}
 	if v.IsNil() {
-		return code.CheckInNotExistError
+		return gerror.NewCode(gcode.CodeOperationFailed, "签到已结束")
 	}
 	cacheData := &define.RedisCheckinData{}
 	if err = v.Struct(&cacheData); err != nil {
 		return err
 	}
 	if req.CheckinKey != cacheData.CheckinKey {
-		return code.CheckinKeyError
+		return gerror.NewCode(gcode.CodeBusinessValidationFailed, "签到密钥错误")
 	}
 	// 签到码正确,写入数据库
 	if _, err = dao.CheckinDetail.Ctx(ctx).Where(g.Map{
@@ -246,5 +249,58 @@ func (c *checkinService) DeleteCheckinRecord(ctx context.Context, checkinRecordI
 		return err
 	}
 	return nil
+}
 
+func (c *checkinService) ExportCheckinCsv(ctx context.Context, courseId int) (file *bytes.Buffer, err error) {
+	userRecords := make([]*define.EnrollUserDetail, 0)
+	// 查出全部选课学生
+	if err = dao.ReCourseUser.Ctx(ctx).Where(dao.ReCourseUser.Columns.CourseId, courseId).WithAll().
+		Scan(&userRecords); err != nil {
+		return nil, err
+	}
+	checkinRecords := make([]*define.ExportCheckinRecord, 0)
+	if err = dao.CheckinRecord.Ctx(ctx).Where(dao.CheckinRecord.Columns.CourseId, courseId).WithAll().
+		Scan(&checkinRecords); err != nil {
+		return nil, err
+	}
+	// 新建csv
+	file = &bytes.Buffer{}
+	utils.WriteBom(file)
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+	headLine := []string{"姓名", "学号"}
+	// 写入表头
+	for _, record := range checkinRecords {
+		headLine = append(headLine, record.CheckinName)
+	}
+	if err = writer.Write(headLine); err != nil {
+		return nil, err
+	}
+	data := make([][]string, 0)
+	// 数据量也不大就直接三层for了
+	for _, record := range userRecords {
+		row := make([]string, 0)
+		row = append(row, record.UserDetail.Username)
+		row = append(row, record.UserDetail.UserNum)
+		for _, checkinRecord := range checkinRecords {
+			isCheckin := false
+			count := 0
+			for _, checkinDetail := range checkinRecord.CheckinDetails {
+				if checkinDetail.UserId == record.UserId && checkinDetail.IsCheckin {
+					count++
+					isCheckin = true
+					row = append(row, "√")
+					break
+				}
+			}
+			if !isCheckin {
+				row = append(row, " ")
+			}
+		}
+		data = append(data, row)
+	}
+	if err = writer.WriteAll(data); err != nil {
+		return nil, err
+	}
+	return file, nil
 }

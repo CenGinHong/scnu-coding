@@ -14,8 +14,8 @@ var Notify = &notifyService{
 }
 
 type notifyService struct {
-	isMessageNotifyNotReadCache utils.MyCache
-	isCommentNotifyNotReadCache utils.MyCache
+	isMessageNotifyNotReadCache *utils.MyCache
+	isCommentNotifyNotReadCache *utils.MyCache
 }
 
 //// MessageNotify 置入消息

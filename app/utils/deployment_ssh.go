@@ -18,39 +18,39 @@ type deploymentSshComponent struct {
 }
 
 func newDeploymentSshPoolComponent() (d deploymentSshComponent) {
-	//var config *ssh.ClientConfig
-	//switch g.Cfg().GetString("ide.deploymentType") {
-	//// 使用docker部署
-	//case "docker":
-	//	config = &ssh.ClientConfig{
-	//		User:            g.Cfg().GetString("ide.deployment.docker.user"),
-	//		Auth:            []ssh.AuthMethod{ssh.Password(g.Cfg().GetString("ide.deployment.docker.pass"))},
-	//		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	//		Timeout:         30 * time.Second,
-	//	}
-	//	// 使用k3s部署
-	//case "k3s":
-	//	config = &ssh.ClientConfig{
-	//		User:            g.Cfg().GetString("ide.deployment.k3s.user"),
-	//		Auth:            []ssh.AuthMethod{ssh.Password(g.Cfg().GetString("ide.deployment.k3s.pass"))},
-	//		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	//		Timeout:         30 * time.Second,
-	//	}
-	//default:
-	//	panic("不支持的部署方式")
-	//}
-	//// ssh client 初始化
-	//pool := sshpool.New(config, nil)
-	//d = deploymentSshComponent{pool}
-	//session, err := d.Get(g.Cfg().GetString("ide.deployment.docker.host"))
-	//if err != nil {
-	//	panic("session连接失败")
-	//}
-	//defer session.Put()
-	//// 测试下
-	//if err = session.Run("echo test"); err != nil {
-	//	panic(err)
-	//}
+	var config *ssh.ClientConfig
+	switch g.Cfg().GetString("ide.deploymentType") {
+	// 使用docker部署
+	case "docker":
+		config = &ssh.ClientConfig{
+			User:            g.Cfg().GetString("ide.deployment.docker.user"),
+			Auth:            []ssh.AuthMethod{ssh.Password(g.Cfg().GetString("ide.deployment.docker.pass"))},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			Timeout:         30 * time.Second,
+		}
+		// 使用k3s部署
+	case "k3s":
+		config = &ssh.ClientConfig{
+			User:            g.Cfg().GetString("ide.deployment.k3s.user"),
+			Auth:            []ssh.AuthMethod{ssh.Password(g.Cfg().GetString("ide.deployment.k3s.pass"))},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			Timeout:         30 * time.Second,
+		}
+	default:
+		panic("不支持的部署方式")
+	}
+	// ssh client 初始化
+	pool := sshpool.New(config, nil)
+	d = deploymentSshComponent{pool}
+	session, err := d.Get(g.Cfg().GetString("ide.deployment.docker.host"))
+	if err != nil {
+		panic("session连接失败")
+	}
+	defer session.Put()
+	// 测试下
+	if err = session.Run("echo test"); err != nil {
+		panic(err)
+	}
 	return d
 }
 

@@ -120,14 +120,14 @@ func (c *commentService) InsertLabComment(ctx context.Context, req *define.Inser
 func (c *commentService) DeleteLabComment(ctx context.Context, commentId int) (err error) {
 	delData := make([]int, 0)
 	delData = append(delData, commentId)
-	newDelData, err := dao.LabComment.Ctx(ctx).Where(dao.LabComment.Columns.Pid, commentId).Array(dao.LabComment.Columns.CommentId)
+	newDelData, err := dao.LabComment.Ctx(ctx).Where(dao.LabComment.Columns.Pid, commentId).Array(dao.LabComment.Columns.LabCommentId)
 	if err != nil {
 		return err
 	}
 	for len(newDelData) > 0 {
 		// 追加新的删除数据
 		delData = append(delData, gconv.Ints(newDelData)...)
-		newDelData, err = dao.LabComment.Ctx(ctx).Where(dao.LabComment.Columns.Pid, newDelData).Array(dao.LabComment.Columns.CommentId)
+		newDelData, err = dao.LabComment.Ctx(ctx).Where(dao.LabComment.Columns.Pid, newDelData).Array(dao.LabComment.Columns.LabCommentId)
 		if err != nil {
 			return err
 		}
@@ -147,14 +147,16 @@ func (c *commentService) DeleteLabComment(ctx context.Context, commentId int) (e
 func (c *commentService) DeleteCourseComment(ctx context.Context, commentId int) (err error) {
 	delData := make([]int, 0)
 	delData = append(delData, commentId)
-	newDelData, err := dao.CourseComment.Ctx(ctx).Where(dao.CourseComment.Columns.Pid, commentId).Array(dao.CourseComment.Columns.CommentId)
+	newDelData, err := dao.CourseComment.Ctx(ctx).Where(dao.CourseComment.Columns.Pid, commentId).
+		Array(dao.CourseComment.Columns.CourseCommentId)
 	if err != nil {
 		return err
 	}
 	for len(newDelData) > 0 {
 		// 追加新的删除数据
 		delData = append(delData, gconv.Ints(newDelData)...)
-		newDelData, err = dao.CourseComment.Ctx(ctx).Where(dao.CourseComment.Columns.Pid, newDelData).Array(dao.CourseComment.Columns.CommentId)
+		newDelData, err = dao.CourseComment.Ctx(ctx).Where(dao.CourseComment.Columns.Pid, newDelData).
+			Array(dao.CourseComment.Columns.CourseCommentId)
 		if err != nil {
 			return err
 		}

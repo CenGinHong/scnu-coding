@@ -12,45 +12,45 @@ import (
 
 // SysUserDao is the manager for logic model data accessing and custom defined data operations functions management.
 type SysUserDao struct {
-	Table   string          // Table is the underlying table name of the DAO.
-	Group   string          // Group is the database configuration group name of current DAO.
+	Table   string         // Table is the underlying table name of the DAO.
+	Group   string         // Group is the database configuration group name of current DAO.
 	Columns SysUserColumns // Columns is the short type for Columns, which contains all the column names of Table for convenient usage.
 }
 
 // SysUserColumns defines and stores column names for table sys_user.
 type SysUserColumns struct {
-	UserId        string // 主键                   
-    Email         string // 邮箱                   
-    UserNum       string // 学号/职工号            
-    Username      string // 真实姓名               
-    Grade         string // 年级                   
-    School        string // 学院                   
-    Password      string // 密码                   
-    AvatarFileId  string // 头像url                
-    Gender        string // 性别                   
-    Major         string // 专业                   
-    Organization  string // 单位，例如软件工程4班  
-    RoleId        string // 角色id                 
-    UpdatedAt     string // 修改时间               
-    CreatedAt     string // 创建时间
+	UserId       string // 主键
+	Email        string // 邮箱
+	UserNum      string // 学号/职工号
+	Username     string // 真实姓名
+	Grade        string // 年级
+	School       string // 学院
+	Password     string // 密码
+	AvatarImg    string // 头像url
+	Gender       string // 性别
+	Major        string // 专业
+	Organization string // 单位，例如软件工程4班
+	RoleId       string // 角色id
+	UpdatedAt    string // 修改时间
+	CreatedAt    string // 创建时间
 }
 
 //  sysUserColumns holds the columns for table sys_user.
 var sysUserColumns = SysUserColumns{
-	UserId:       "user_id",         
-            Email:        "email",           
-            UserNum:      "user_num",        
-            Username:     "username",        
-            Grade:        "grade",           
-            School:       "school",          
-            Password:     "password",        
-            AvatarFileId: "avatar_file_id",  
-            Gender:       "gender",          
-            Major:        "major",           
-            Organization: "organization",    
-            RoleId:       "role_id",         
-            UpdatedAt:    "updated_at",      
-            CreatedAt:    "created_at",
+	UserId:       "user_id",
+	Email:        "email",
+	UserNum:      "user_num",
+	Username:     "username",
+	Grade:        "grade",
+	School:       "school",
+	Password:     "password",
+	AvatarImg:    "avatar_img",
+	Gender:       "gender",
+	Major:        "major",
+	Organization: "organization",
+	RoleId:       "role_id",
+	UpdatedAt:    "updated_at",
+	CreatedAt:    "created_at",
 }
 
 // NewSysUserDao creates and returns a new DAO object for table data access.
