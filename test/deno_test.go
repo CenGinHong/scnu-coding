@@ -3,9 +3,15 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/docker/docker/api/types"
 	"github.com/gogf/gf/os/gtime"
+	helmclient "github.com/mittwald/go-helm-client"
+	"helm.sh/helm/v3/pkg/repo"
+	"io/ioutil"
 	"scnu-coding/app/dao"
 	"scnu-coding/app/model"
+	"scnu-coding/app/system/admin/internala/service"
+	"scnu-coding/app/utils"
 	"testing"
 )
 
@@ -50,5 +56,86 @@ func TestGetAllUser(t *testing.T) {
 	if err != nil {
 		return
 	}
+}
 
+func TestK8s(t *testing.T) {
+	k, err := ioutil.ReadFile("D:\\project\\scnu-coding\\config\\k3s.yaml")
+	if err != nil {
+		panic(err)
+	}
+	cl, err := helmclient.NewClientFromKubeConf(&helmclient.KubeConfClientOptions{
+		Options:     &helmclient.Options{Debug: true, Namespace: "test"},
+		KubeContext: "kind",
+		KubeConfig:  k,
+	})
+	if err != nil {
+		print(err)
+	}
+	chartRepo := repo.Entry{
+		Name: "stable",
+		URL:  "https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts",
+	}
+
+	// Add a chart-repository to the client
+	if err := cl.AddOrUpdateChartRepo(chartRepo); err != nil {
+		panic(err)
+	}
+	chart, err := cl.InstallOrUpgradeChart(context.Background(), &helmclient.ChartSpec{
+		ReleaseName: "mysql",
+		ChartName:   "stable/mysql",
+		Namespace:   "default",
+		UpgradeCRDs: true,
+		Wait:        true,
+	})
+	if err != nil {
+		print(err)
+	}
+	print(chart)
+	//releases, err := cl.ListDeployedReleases()
+	//if err != nil {
+	//	print(err)
+	//}
+	//fmt.Print(releases[0].Namespace)
+}
+
+func TestDocker(t *testing.T) {
+	//env := make([]string,0)
+	//env = append(env, "PASSWORD=12345678")
+	//env = append(env, "DOCKER_USER=horace")
+	//m := make(map[string]string)
+	//m["D:\\project"] = "/home/coder/project"
+	//p := make(map[string]string)
+	//p["3306"]="8080"
+	//err := utils.DockerUtil.RunContainer(context.Background(), "codercom/code-server:latest", p, m, env, "root","test1")
+	//if err != nil {
+	//	return
+	//}
+	//fil := filters.NewArgs(filters.KeyValuePair{Key: "name",Value: "redis"})
+	images, err := utils.DockerUtil.ListImages(context.Background())
+	if err != nil {
+		return
+	}
+	for _, image := range images {
+		print(image.ID)
+	}
+
+	containers, err := utils.DockerUtil.ListContainer(context.Background(), types.ContainerListOptions{
+		//Filters:fil,
+		All: true,
+	})
+	if err != nil {
+		print(err)
+	}
+	for _, container := range containers {
+		fmt.Print(container.Ports[0])
+	}
+
+}
+
+func TestIDE(t *testing.T) {
+	container, err := service.IDE.ListContainer(context.Background())
+	if err != nil {
+		return
+	}
+	fmt.Println(container)
 }

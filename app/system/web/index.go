@@ -3,7 +3,7 @@ package web
 import (
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
-	"scnu-coding/app/system/web/internal/api"
+	"scnu-coding/app/system/web/internala/api"
 )
 
 // @Author: 陈健航
@@ -25,13 +25,12 @@ func Init() {
 			})
 			// 更新个人信息
 			group.POST("/", api.User.UpdateUserInfo)
+			group.GET("/coding-time", api.User.ListCodingTimeByUserId)
 		})
 		group.Group("/ide", func(group *ghttp.RouterGroup) {
 			group.POST("/", api.Ide.OpenIDE)
-			group.Group("/alive", func(group *ghttp.RouterGroup) {
-				group.POST("/", api.Ide.OpenFront)
-				group.DELETE("/", api.Ide.CloseFront)
-			})
+			group.POST("/open", api.Ide.OpenFront)
+			group.POST("/end", api.Ide.CloseFront)
 		})
 		group.Group("/checkin", func(group *ghttp.RouterGroup) {
 			group.GET("/student", api.Checkin.StuListCheckinRecords)
@@ -51,15 +50,17 @@ func Init() {
 			group.GET("/is-enroll", api.Course.IsCourseEnroll)
 			group.GET("/enroll", api.Course.ListCourseEnroll)
 			group.GET("/teacher", api.Course.ListCourseByTeacherId)
-			group.GET("/:courseId", api.Course.GetCourseDetail)
+			group.GET("/:id", api.Course.GetOne)
+			group.DELETE("/:id", api.Course.Delete)
 			group.GET("/overview", api.Course.ListCourseStudentOverview)
 			group.GET("/search", api.Course.SearchCourseByCourseNameOrTeacherName)
-			group.POST("/", api.Course.CreateCourse)
+			group.POST("/", api.Course.InsertCourse)
 			group.Group("/announcement", func(group *ghttp.RouterGroup) {
-				group.POST("/", api.CourseAnnouncement.InsertCourseAnnouncement)
-				group.PUT("/", api.CourseAnnouncement.UpdateCourseAnnouncement)
-				group.GET("/", api.CourseAnnouncement.ListCourseAnnouncement)
-				group.DELETE("/", api.CourseAnnouncement.DeleteCourseAnnouncement)
+				group.POST("/", api.CourseAnnouncement.Insert)
+				group.PUT("/", api.CourseAnnouncement.Update)
+				group.GET("/", api.CourseAnnouncement.ListByCourseId)
+				group.GET("/:id", api.CourseAnnouncement.GetOne)
+				group.DELETE("/", api.CourseAnnouncement.Delete)
 			})
 			group.GET("/open", api.Course.IsOpenByTeacherId)
 			group.Group("/student", func(group *ghttp.RouterGroup) {
@@ -68,10 +69,11 @@ func Init() {
 			group.PUT("/", api.Course.UpdateCourse)
 		})
 		group.Group("/lab", func(group *ghttp.RouterGroup) {
-			group.GET("/", api.Lab.ListLabByCourseId)
-			group.DELETE("/", api.Lab.DeleteLab)
-			group.PUT("/", api.Lab.UpdateLab)
-			group.POST("/", api.Lab.InsertLab)
+			group.GET("/", api.Lab.ListByCourseId)
+			group.GET("/:id", api.Lab.GetOne)
+			group.DELETE("/", api.Lab.Delete)
+			group.PUT("/", api.Lab.Update)
+			group.POST("/", api.Lab.Insert)
 		})
 		group.Group("/comment", func(group *ghttp.RouterGroup) {
 			group.Group("/course", func(group *ghttp.RouterGroup) {

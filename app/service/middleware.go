@@ -6,6 +6,7 @@ import (
 	"github.com/gogf/gf/util/gconv"
 	"scnu-coding/app/model"
 	"scnu-coding/app/utils"
+	"scnu-coding/library/response"
 )
 
 // Middleware 中间件管理服务
@@ -26,21 +27,18 @@ func (s *serviceMiddleware) Ctx(r *ghttp.Request) {
 	// 解析分页数据
 	var pageInfo *model.ContextPageInfo
 	_ = r.ParseQuery(&pageInfo)
-	pageInfo.SortField = gstr.CaseSnake(pageInfo.SortField)
-	pageInfo.SortOrder = gstr.Replace(pageInfo.SortOrder, "end", "")
-	pageInfo.ParseFilterFields = make(map[string][]string, 0)
-	// 解析转换
-	filterFields := r.Get("filterFields")
-	temp := gconv.MapStrStr(filterFields)
-	for k, v := range temp {
-		k = gstr.CaseSnake(k)
-		//这里的temp1是{
-		//	1:计算机
-		//	2：通信这样的结构
-		//}
-		temp1 := gconv.MapStrStr(v)
-		for _, v1 := range temp1 {
-			pageInfo.ParseFilterFields[k] = append(pageInfo.ParseFilterFields[k], v1)
+	if pageInfo != nil {
+		pageInfo.SortField = gstr.CaseSnake(pageInfo.SortField)
+		pageInfo.SortOrder = gstr.Replace(pageInfo.SortOrder, "end", "")
+		pageInfo.ParseFilterFields = make(map[string][]string, 0)
+		tempFilterFields := make(map[string][]string, 0)
+		// 解析转换
+		if err := gconv.Struct(r.Get("filterFields"), &tempFilterFields); err != nil {
+			response.Exit(r, err)
+		}
+		// 转成驼峰方便数据库查询
+		for key, value := range tempFilterFields {
+			pageInfo.ParseFilterFields[gstr.CaseSnake(key)] = value
 		}
 	}
 	customCtx.PageInfo = pageInfo

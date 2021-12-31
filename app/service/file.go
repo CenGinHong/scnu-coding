@@ -33,12 +33,6 @@ const (
 	policyWriteAndRead = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:ListBucket\",\"s3:ListBucketMultipartUploads\",\"s3:GetBucketLocation\"],\"Resource\":[\"arn:aws:s3:::%s\"]},{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:AbortMultipartUpload\",\"s3:DeletePic\",\"s3:GetObject\",\"s3:ListMultipartUploadParts\",\"s3:PutObject\"],\"Resource\":[\"arn:aws:s3:::%s/*\"]}]}"
 )
 
-//const (
-//	policyWriteAndRead = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:*\"],\"Resource\":[\"arn:aws:s3:::%s/*\"]}]}"
-//	policyWriteOnly    = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:PutObject\"],\"Resource\":[\"arn:aws:s3:::%s/*\"]}]}"
-//	policyReadOnly     = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:PutObject\"],\"Resource\":[\"arn:aws:s3:::%s/*\"]}]}"
-//)
-
 func newFileService() (f fileService) {
 	endpoint := g.Cfg().GetString("minio.endpoint")
 	accessKeyId := g.Cfg().GetString("minio.accessKeyId")
@@ -59,8 +53,6 @@ func newFileService() (f fileService) {
 		notUsedCache: utils.NewMyCache(),
 	}
 	ctx := context.Background()
-	o := f.minio.IsOnline()
-	println(o)
 	// 创建一个存储桶
 	isExist, err := m.BucketExists(ctx, bucketName)
 	if err != nil {
@@ -135,7 +127,8 @@ func (f *fileService) RemoveObject(ctx context.Context, fileName string) error {
 	return nil
 }
 
-func (f *fileService) GetMinioAddr(_ context.Context) (addr string) {
-	addr = "http://" + g.Cfg().GetString("minio.endpoint") + f.bucketName
+func (f *fileService) GetMinioAddr(_ context.Context, oriAddr string) (addr string) {
+	addr = g.Cfg().GetString("minio.protocol") + "://" + g.Cfg().GetString("minio.endpoint") + "/" +
+		f.bucketName + "/" + oriAddr
 	return addr
 }

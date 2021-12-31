@@ -57,7 +57,7 @@ func (receiver *RedisMutex) UnLock() {
 
 var redisLock = newRedisLock()
 
-func newRedisLock() (r redsync.Redsync) {
+func newRedisLock() (r *redsync.Redsync) {
 	redisConfig := g.Cfg().GetString("redis.default")
 	split := gstr.Split(redisConfig, ":")
 	host := split[0]
@@ -68,5 +68,5 @@ func newRedisLock() (r redsync.Redsync) {
 		Password: pass,
 	})
 	pool := goredis.NewPool(client)
-	return *redsync.New(pool)
+	return redsync.New(pool)
 }

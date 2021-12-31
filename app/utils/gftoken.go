@@ -135,15 +135,18 @@ func LoginBeforeFunc(r *ghttp.Request) (string, interface{}) {
 	// 转换成结构体
 	if err := r.Parse(&req); err != nil {
 		response.Exit(r, err)
+		return "", nil
 	}
 	// 在数据库查询用户是否存在(只查出密码）
 	password, err := dao.SysUser.Ctx(context.TODO()).Where(dao.SysUser.Columns.UserNum, req.UserNum).Value(dao.SysUser.Columns.Password)
 	if err != nil {
 		response.Exit(r, err)
+		return "", nil
 	}
 	// 不存在该用户
 	if password.IsNil() {
 		response.Exit(r, errors.New("账号或密码错误"))
+		return "", nil
 	}
 	// 校验密码
 	if err = bcrypt.CompareHashAndPassword(password.Bytes(), []byte(req.Password)); err != nil {
@@ -153,6 +156,7 @@ func LoginBeforeFunc(r *ghttp.Request) (string, interface{}) {
 	userInfo := &model.ContextUser{}
 	if err = dao.SysUser.Ctx(context.TODO()).Where(dao.SysUser.Columns.UserNum, req.UserNum).Scan(&userInfo); err != nil {
 		response.Exit(r, err)
+		return "", nil
 	}
 	//校验成功
 	return gconv.String(userInfo.UserId), userInfo

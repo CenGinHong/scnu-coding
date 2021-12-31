@@ -21,6 +21,7 @@ func init() {
 		group.ALL("/hello", api.Hello.Index)
 	})
 	s.Group("/test", func(group *ghttp.RouterGroup) {
+		group.GET("/hello", api.Hello.Index)
 		group.GET("/", api.Hello.Index)
 		group.POST("/upload", api.Hello.Index1)
 		group.GET("/start", api.Hello.Index1)

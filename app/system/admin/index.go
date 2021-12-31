@@ -3,7 +3,7 @@ package admin
 import (
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
-	"scnu-coding/app/system/admin/internal/api"
+	"scnu-coding/app/system/admin/internala/api"
 )
 
 func Init() {
@@ -11,7 +11,7 @@ func Init() {
 	s.BindMiddlewareDefault()
 	s.Group("/admin", func(group *ghttp.RouterGroup) {
 		group.Group("/user", func(group *ghttp.RouterGroup) {
-			group.GET("/", api.User.GetAllUser)
+			group.GET("/student", api.User.GetAllStudent)
 			group.POST("/password", api.User.ResetPassword)
 			group.PATCH("/", api.User.UpdateUser)
 		})
@@ -20,6 +20,12 @@ func Init() {
 			group.Group("/enroll", func(group *ghttp.RouterGroup) {
 				group.GET("/", api.Course.ListCourseEnroll)
 			})
+		})
+		group.Group("/lab", func(group *ghttp.RouterGroup) {
+			group.GET("/", api.Lab.ListAllLab)
+		})
+		group.Group("/submit", func(group *ghttp.RouterGroup) {
+			group.GET("/", api.LabSubmit.ListAllSubmitByLabId)
 		})
 	})
 }

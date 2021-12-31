@@ -26,26 +26,31 @@
         system   = "linux"
         cgo      = 0
     [gfcli.gen.dao]
-        link = "mysql:horace:scipio1322?@tcp(localhost:3306)/scnu_coding"
+        link = "mysql:horace:Scipio1322?@tcp(93.179.125.223:3306)/scnu_coding"
         prefix = ""
 [minio]
     endpoint = "localhost:9000"
-    accessKeyId = "admin"
-    secretAccessKey = "admin123"
+    accessKeyId = "horace"
+    secretAccessKey = "scipio1322?"
     bucketName = "scnu-coding"
     location = "cn-north-1"
+    protocol = "http"
 
 [redis]
-    default = "localhost:6379,0,scipio1322?"
+    default = "localhost:6379,0,Scipio1322?"
 
 [ide]
     # 目前只有两种方式，docker，k3s
     deploymentType = "docker"
     # docker运行的主机
     [ide.deployment.docker]
-        host = "localhost"
-        user = "horace"
-        pass = "scipio"
+        host = "10.50.3.213"
+        port = "2375"
+        protocol = "tcp"
+        [ide.deployment.docker.tls]
+            caPath = ""
+            certPath = ""
+            keyPath = ""
     # k3s master主机
     [ide.deployment.k3s]
         host = "93.179.125.223:27196"
@@ -56,36 +61,32 @@
         user = "root"
         pass = "TefmYnzGKFVa"
     # 代码存储的主机，如果是docker环境
-    [ide.storage]
-        host = "localhost"
-        user = "horace"
-        pass = "scipio"
-        workspaceBasePathRemote = "/mnt/code-platform"
-        workspaceBasePathLocal = ""
-    [ide.config]
-        chartName = ""
-        # 带单位
-        memoryLimit = "500m"
-    [ide.image.name]
-        cpp = "registry.cn-hangzhou.aliyuncs.com/jhchen/theia-cpp:0.04"
-        java = "theiaide/theia-java:latest"
-        python = "theiaide/theia-python:latest"
-        go = "registry.cn-hangzhou.aliyuncs.com/jhchen/theia-go:latest"
-        php = "registry.cn-hangzhou.aliyuncs.com/jhchen/theia-php:latest"
-        swift = "registry.cn-hangzhou.aliyuncs.com/jhchen/theia-swift:latest"
-        full = "theiaide/theia-full:latest"
-        web = "theiaide/theia:latest"
+#    [ide.storage]
+#        host = "localhost"
+#        user = "horace"
+#        pass = "scipio"
+#        workspaceBasePathRemote = "/mnt/code-platform"
+#        workspaceBasePathLocal = ""
+    [ide.container.connect]
+        port = "8199"
+        ip = "10.50.1.184"
+        openPath = "/web/ide/open"
+        endPath = "/web/ide/end"
+    [ide.container.config]
+
+    [ide.image]
+        imageNames = [
+            "registry.cn-hangzhou.aliyuncs.com/online-ide/code-server-full:latest",
+            "registry.cn-hangzhou.aliyuncs.com/online-ide/code-server-cpp:latest",
+            "registry.cn-hangzhou.aliyuncs.com/online-ide/code-server-java:latest",
+            "registry.cn-hangzhou.aliyuncs.com/online-ide/code-server-python:latest"
+        ]
     [ide.helm]
         chartName = ""
-#    [ide.docker]
-#        #运行的主机
-#        user = "root"
-#        host = "93.179.125.223:27196"
-#        pass = "TefmYnzGKFVa"
 
 # Database.
 [database]
-    link  = "mysql:horace:scipio1322?@tcp(localhost:3306)/scnu_coding"
+    link  = "mysql:root:Scipio1322?@tcp(localhost:3306)/scnu_coding"
     debug = true
     # Database logger.
     [database.logger]

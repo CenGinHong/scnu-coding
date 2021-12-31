@@ -8,7 +8,7 @@ import (
 
 func init() {
 	if g.Cfg().GetBool("server.IsMultiple") {
-		reidsAdapter := adapter.NewRedis(g.Redis())
-		g.DB().GetCache().SetAdapter(reidsAdapter)
+		redisAdapter := adapter.NewRedis(g.Redis())
+		g.DB().GetCache().SetAdapter(redisAdapter)
 	}
 }

@@ -1,19 +1,22 @@
 package language_enum
 
 const (
-	Cpp = iota + 1
+	Full = iota
+	Cpp
 	Java
 	Python
 )
 
 func Num2LanguageString(languageEnum int) (LanguageName string) {
 	switch languageEnum {
+	case Full:
+		LanguageName = "full"
 	case Cpp:
-		LanguageName = "Cpp"
+		LanguageName = "cpp"
 	case Java:
-		LanguageName = "Java"
+		LanguageName = "java"
 	case Python:
-		LanguageName = "Python"
+		LanguageName = "python"
 	}
 	return LanguageName
 }
