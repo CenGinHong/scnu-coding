@@ -103,11 +103,11 @@ func (c *courseAPI) ImportStudent2Class(r *ghttp.Request) {
 // @param r *ghttp.Request
 // @date 2021-09-16 20:15:45
 func (c *courseAPI) InsertCourse(r *ghttp.Request) {
-	var req *define.CreateCourseReq
+	var req *define.InsertCourseReq
 	if err := r.Parse(&req); err != nil {
 		return
 	}
-	id, err := service.Course.CreateCourse(r.Context(), req)
+	id, err := service.Course.InsertCourse(r.Context(), req)
 	if err != nil {
 		return
 	}
@@ -155,6 +155,19 @@ func (c *courseAPI) ListCourseByTeacherId(r *ghttp.Request) {
 		return
 	}
 	response.Succ(r, resp)
+}
+
+func (c *courseAPI) JoinClass(r *ghttp.Request) {
+	var req *define.JoinClassReq
+	if err := r.Parse(&req); err != nil {
+		response.Exit(r, err)
+		return
+	}
+	if err := service.Course.JoinClass(r.Context(), req); err != nil {
+		response.Exit(r, err)
+		return
+	}
+	response.Succ(r)
 }
 
 //// ListCourseEnroll 学生列出自己加入的课程
@@ -221,13 +234,13 @@ func (c *courseAPI) ListCourseByTeacherId(r *ghttp.Request) {
 //	response.Succ(r, true)
 //}
 
-// SearchCourseByCourseNameOrTeacherName 搜索课程
+// ListCourseByCourseName 搜索课程
 // @receiver receiver
 // @params r
 // @date 2021-05-25 00:09:45
-func (c *courseAPI) SearchCourseByCourseNameOrTeacherName(r *ghttp.Request) {
-	courseNameOrTeacherName := r.GetString("courseNameOrTeacherName")
-	resp, err := service.Course.SearchCourseByCourseNameOrTeacherName(r.Context(), courseNameOrTeacherName)
+func (c *courseAPI) ListCourseByCourseName(r *ghttp.Request) {
+	courseName := r.GetString("courseName")
+	resp, err := service.Course.ListCourseByCourseName(r.Context(), courseName)
 	if err != nil {
 		response.Exit(r, err)
 		return

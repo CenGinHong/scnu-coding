@@ -40,6 +40,12 @@ func (s *serviceMiddleware) Ctx(r *ghttp.Request) {
 		for key, value := range tempFilterFields {
 			pageInfo.ParseFilterFields[gstr.CaseSnake(key)] = value
 		}
+		if pageInfo.Current < 0 {
+			pageInfo.Current = 1
+		}
+		if pageInfo.PageSize <= 0 {
+			pageInfo.PageSize = 10
+		}
 	}
 	customCtx.PageInfo = pageInfo
 	// 执行下一步请求逻辑

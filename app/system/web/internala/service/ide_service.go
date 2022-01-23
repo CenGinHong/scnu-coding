@@ -3,8 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/gogf/gf/frame/g"
-	"github.com/gogf/gf/os/gcron"
 	"github.com/gogf/gf/os/gtime"
 	"github.com/gogf/gf/text/gstr"
 	"github.com/gogf/gf/util/gconv"
@@ -13,6 +14,8 @@ import (
 	"scnu-coding/app/system/web/internala/define"
 	"scnu-coding/app/utils"
 	"scnu-coding/library/role"
+	"sync"
+	"time"
 )
 
 var IDE = newIDEService()
@@ -24,8 +27,9 @@ type iDEService struct {
 }
 
 type aliveStruct struct {
-	Count     int         // front的数量
-	CreatedAt *gtime.Time // 创建时间
+	Count            int         // front的数量
+	CreatedAt        *gtime.Time // 创建时间
+	CountResetZeroAt *gtime.Time // count最近清零的时间
 }
 
 func newIDEService() iDEService {
@@ -33,8 +37,7 @@ func newIDEService() iDEService {
 	i.ide = newIDE()
 	i.ideAliveCache = *utils.NewMyCache()
 	i.lock = utils.NewMyMutex()
-	// 定时清理任务
-	_, _ = gcron.Add("0 */1 * * * *", func() { i.ClearContainer(context.Background()) })
+	i.removeAllIDE()
 	return i
 }
 
@@ -70,32 +73,40 @@ func (t *iDEService) OpenIDE(ctx context.Context, req *define.OpenIDEReq) (url s
 	return url, nil
 }
 
-// OpenFront 新打开一个容器页面
+// FrontAlive 新打开一个容器页面
 // @params userId
 // @params labId
 // @return err
 // @date 2021-05-03 00:06:16
 // 注意该请求是由插件发出，没有token携带userId信息
-func (t *iDEService) OpenFront(_ context.Context, req *define.IDEIdentifier) (err error) {
+func (t *iDEService) FrontAlive(_ context.Context, req *define.FrontAliveReq) (err error) {
 	t.lock.Lock()
 	defer t.lock.UnLock()
 	alive := &aliveStruct{}
 	key := fmt.Sprintf("%d-%d", req.UserId, req.LabId)
-	data, err := t.ideAliveCache.Cache.GetVar(key)
+	data, err := t.ideAliveCache.Cache.GetOrSet(key, &aliveStruct{
+		Count:            0,
+		CreatedAt:        gtime.Now(),
+		CountResetZeroAt: nil,
+	}, 0)
 	if err != nil {
 		return err
 	}
-	// 本来不存在
-	if data.IsNil() {
-		// 存入新的信息置存活信息
-		alive.Count = 1
-		alive.CreatedAt = gtime.Now()
-	} else {
-		// 更新
-		if err = data.Struct(&alive); err != nil {
-			return err
-		}
+	if err = gconv.Struct(data, &alive); err != nil {
+		return err
+	}
+	// 看看要不要
+	if req.IsOpen {
 		alive.Count++
+		alive.CountResetZeroAt = nil
+	} else {
+		alive.Count--
+	}
+	// 触发关闭检查
+	if alive.Count == 0 {
+		currentTime := gtime.Now()
+		alive.CountResetZeroAt = currentTime
+		go t.readyToShutDown(key, currentTime)
 	}
 	if err = t.ideAliveCache.Cache.Set(key, alive, 0); err != nil {
 		return err
@@ -103,69 +114,75 @@ func (t *iDEService) OpenFront(_ context.Context, req *define.IDEIdentifier) (er
 	return nil
 }
 
-// CloseFront 关闭一个前端页面，如果全部前端服务被关闭，启用goroutine准备关闭容器
-// @Description:
-// @receiver t *iDEService
-// @param Id int
-// @param labID int
-// @return err error
-// @date 2021-07-17 22:25:40
-func (t *iDEService) CloseFront(_ context.Context, req *define.IDEIdentifier) (err error) {
+func (t *iDEService) readyToShutDown(key string, atZeroTime *gtime.Time) {
+	// 先睡眠30秒
+	time.Sleep(time.Duration(30) * time.Second)
 	t.lock.Lock()
 	defer t.lock.UnLock()
-	alive := &aliveStruct{}
-	key := fmt.Sprintf("%d-%d", req.UserId, req.LabId)
-	data, err := t.ideAliveCache.Cache.GetVar(key)
+	// 重新取值检查
+	data, err := t.ideAliveCache.Cache.GetOrSet(key, &aliveStruct{
+		Count:            0,
+		CreatedAt:        gtime.Now(),
+		CountResetZeroAt: nil,
+	}, 0)
 	if err != nil {
-		return err
-	}
-	if err = data.Struct(alive); err != nil {
-		return err
-	}
-	// 所有的前端已经关闭
-	alive.Count--
-	if err = t.ideAliveCache.Cache.Set(key, alive, 0); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (t *iDEService) ClearContainer(ctx context.Context) {
-	data, err := t.ideAliveCache.Cache.Data()
-	if err != nil {
+		g.Log().Error(err)
 		return
 	}
-	for key, value := range data {
-		alive := &aliveStruct{}
-		if err = gconv.Struct(value, &alive); err != nil {
+	alive := &aliveStruct{}
+	if err = gconv.Struct(data, alive); err != nil {
+		g.Log().Error(err)
+		return
+	}
+	// 触发关闭
+	if alive.CountResetZeroAt != nil && alive.CountResetZeroAt == atZeroTime {
+		split := gstr.Split(key, "-")
+		userId := gconv.Int(split[0])
+		labId := gconv.Int(split[1])
+		// 移除容器
+		if err = t.ide.RemoveIDE(context.Background(), &define.IDEIdentifier{UserId: userId, LabId: labId}); err != nil {
+			return
+		}
+		// 移除缓存
+		if _, err = t.ideAliveCache.Cache.Remove(key); err != nil {
+			g.Log().Error(err)
+			return
+		}
+		// 插入编码时间
+		duration := alive.CountResetZeroAt.Sub(alive.CreatedAt).Minutes()
+		if _, err = dao.CodingTime.Ctx(context.Background()).Data(g.Map{
+			dao.CodingTime.Columns.UserId:   userId,
+			dao.CodingTime.Columns.Duration: duration,
+			dao.CodingTime.Columns.LabId:    labId,
+		}).Insert(); err != nil {
 			g.Log().Error(err)
 		}
-		// 关闭该容器
-		if alive.Count == 0 {
-			go func() {
-				ideKey := gconv.String(key)
-				split := gstr.Split(ideKey, "-")
-				userId := gconv.Int(split[0])
-				labId := gconv.Int(split[1])
-				ident := &define.CloseIDEReq{UserId: userId, LabId: labId}
-				if err = t.ide.RemoveIDE(ctx, ident); err != nil {
-					g.Log().Error(err)
-					return
-				}
-				if _, err = t.ideAliveCache.Cache.Remove(key); err != nil {
-					g.Log().Error(err)
-					return
-				}
-				// 插入编码时间
-				duration := gtime.Now().Sub(alive.CreatedAt).Minutes()
-				if _, err = dao.CodingTime.Ctx(ctx).Data(g.Map{
-					dao.CodingTime.Columns.UserId:   userId,
-					dao.CodingTime.Columns.Duration: duration,
-					dao.CodingTime.Columns.LabId:    labId,
-				}).Insert(); err != nil {
-					g.Log().Error(err)
-				}
-			}()
-		}
 	}
+	return
+}
+
+// removeAllIDE 关闭所有IDE容器
+// @Description
+// @receiver t
+// @param ctx
+// @date 2022-01-13 11:19:00
+func (t *iDEService) removeAllIDE() {
+	// 列表还在存活
+	containers, err := utils.DockerUtil.ListContainer(context.Background(), types.ContainerListOptions{
+		All:     true,
+		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: "ide"})})
+	if err != nil {
+		panic(err)
+	}
+	wg := &sync.WaitGroup{}
+	for _, container := range containers {
+		wg.Add(1)
+		go func(container1 types.Container) {
+			defer wg.Done()
+			if err = utils.DockerUtil.RemoveContainer(context.Background(), container1.ID); err != nil {
+				panic(err)
+			}
+		}(container)
+	}
+	wg.Wait()
 }

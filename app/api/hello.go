@@ -2,9 +2,8 @@ package api
 
 import (
 	"fmt"
-	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
-	"scnu-coding/library/response"
+	"github.com/gogf/gf/os/glog"
 )
 
 var Hello = helloApi{}
@@ -30,14 +29,21 @@ func (a *helloApi) Index(r *ghttp.Request) {
 	println(req)
 }
 func (a *helloApi) Index1(r *ghttp.Request) {
-	p := r.GetUploadFile("file")
-	f := r.GetMultipartFiles("file")
-	fmt.Println(f)
-	fmt.Println(p)
-	response.Succ(r, g.Map{
-		"id": 1,
-	})
-}
-func (a *helloApi) Index2(r *ghttp.Request) {
-	fmt.Println("receive a stop")
+	ws, err := r.WebSocket()
+	if err != nil {
+		glog.Error(err)
+		r.Exit()
+	}
+	glog.Info(123)
+	for {
+		msgType, msg, err := ws.ReadMessage()
+		if err != nil {
+			glog.Info(456)
+			return
+		}
+		if err = ws.WriteMessage(msgType, msg); err != nil {
+			return
+		}
+	}
+
 }

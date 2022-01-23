@@ -187,7 +187,7 @@ func (c *checkinService) ListCheckinDetailByCheckInRecordId(ctx context.Context,
 	// c查出有无参与该签到
 	if err = dao.CheckinDetail.Ctx(ctx).Where(dao.CheckinDetail.Columns.CheckinRecordId, checkInRecordId).
 		Where(dao.CheckinDetail.Columns.UserId, gdb.ListItemValuesUnique(records, "UserId")).
-		ScanList(&records, "checkinDetail", "user_id:UserId"); err != nil {
+		ScanList(&records, "CheckinDetail", "user_id:UserId"); err != nil {
 		return nil, err
 	}
 	resp = response.GetPageResp(records, total, nil)
@@ -195,10 +195,11 @@ func (c *checkinService) ListCheckinDetailByCheckInRecordId(ctx context.Context,
 }
 
 func (c *checkinService) UpdateCheckinDetail(ctx context.Context, req *define.UpdateCheckinDetailReq) (err error) {
-	if _, err = dao.CheckinDetail.Ctx(ctx).
-		Where(dao.CheckinDetail.Columns.CheckinDetailId, req.CheckinDetailId).
-		Data(dao.CheckinDetail.Columns.IsCheckin, req.IsCheckin).
-		Update(); err != nil {
+	if _, err = dao.CheckinDetail.Ctx(ctx).Data(g.Map{
+		dao.CheckinDetail.Columns.CheckinRecordId: req.CheckinRecordId,
+		dao.CheckinDetail.Columns.IsCheckin:       req.IsCheckin,
+		dao.CheckinDetail.Columns.UserId:          req.UserId,
+	}).Save(); err != nil {
 		return err
 	}
 	return nil
@@ -236,12 +237,12 @@ func (c *checkinService) CheckIn(ctx context.Context, req *define.StudentCheckin
 	return nil
 }
 
-func (c *checkinService) DeleteCheckinRecord(ctx context.Context, checkinRecordIds []string) (err error) {
+func (c *checkinService) DeleteCheckinRecord(ctx context.Context, id int) (err error) {
 	if err = g.DB().Transaction(ctx, func(ctx context.Context, tx *gdb.TX) error {
-		if _, err = dao.CheckinRecord.Ctx(ctx).TX(tx).WherePri(checkinRecordIds).Delete(); err != nil {
+		if _, err = dao.CheckinRecord.Ctx(ctx).TX(tx).WherePri(id).Delete(); err != nil {
 			return err
 		}
-		if _, err = dao.CheckinDetail.Ctx(ctx).TX(tx).Where(dao.CheckinDetail.Columns.CheckinRecordId, checkinRecordIds).Delete(); err != nil {
+		if _, err = dao.CheckinDetail.Ctx(ctx).TX(tx).Where(dao.CheckinDetail.Columns.CheckinRecordId, id).Delete(); err != nil {
 			return err
 		}
 		return nil

@@ -69,7 +69,8 @@ type ImportStudent2ClassResp struct {
 type SearchCourseResp struct {
 	ListCourseResp
 	IsTakeDetail struct {
-		IsTake bool `json:"isTake"` // 是否已经加入该门课程
+		CourseId int  `orm:"course_id" json:"-"` // 主键
+		IsTake   bool `json:"isTake"`            // 是否已经加入该门课程
 	} `json:"isTakeDetail"`
 }
 
@@ -104,7 +105,7 @@ type DeleteStudentFromClassReq struct {
 	CourseId int
 }
 
-type CreateCourseReq struct {
+type InsertCourseReq struct {
 	CourseName   string `orm:"course_name"       json:"courseName"`   // 课程名称，限15字
 	UserId       int    `orm:"user_id"           json:"userId"`       // 教师id
 	CourseDes    string `orm:"course_des"        json:"courseDes"`    // 课程描述，限300字
@@ -136,4 +137,10 @@ type EnrollUserDetail struct {
 		Username     string `orm:"username"        json:"username"`     // 真实姓名，限6字
 		Organization string `orm:"organization"    json:"organization"` // 单位，例如计算机学院，限15字
 	} `orm:"with:user_id" json:"userDetail"`
+}
+
+type JoinClassReq struct {
+	UserId    int
+	CourseId  int
+	SecretKey string
 }

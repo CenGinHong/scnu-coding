@@ -128,6 +128,9 @@ func (f *fileService) RemoveObject(ctx context.Context, fileName string) error {
 }
 
 func (f *fileService) GetMinioAddr(_ context.Context, oriAddr string) (addr string) {
+	if oriAddr == "" {
+		return ""
+	}
 	addr = g.Cfg().GetString("minio.protocol") + "://" + g.Cfg().GetString("minio.endpoint") + "/" +
 		f.bucketName + "/" + oriAddr
 	return addr

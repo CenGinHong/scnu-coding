@@ -63,9 +63,7 @@ func (c *courseAnnouncementService) ListCourseAnnouncement(ctx context.Context, 
 	}
 	// 拼接地址
 	for _, record := range records {
-		if record.AttachmentSrc != "" {
-			record.AttachmentSrc = service.File.GetMinioAddr(ctx, record.AttachmentSrc)
-		}
+		record.AttachmentSrc = service.File.GetMinioAddr(ctx, record.AttachmentSrc)
 	}
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil

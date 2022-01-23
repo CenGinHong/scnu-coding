@@ -29,8 +29,7 @@ func Init() {
 		})
 		group.Group("/ide", func(group *ghttp.RouterGroup) {
 			group.POST("/", api.Ide.OpenIDE)
-			group.POST("/open", api.Ide.OpenFront)
-			group.POST("/end", api.Ide.CloseFront)
+			group.PUT("/open", api.Ide.FrontAlive)
 		})
 		group.Group("/checkin", func(group *ghttp.RouterGroup) {
 			group.GET("/student", api.Checkin.StuListCheckinRecords)
@@ -38,29 +37,30 @@ func Init() {
 			group.Group("/record", func(group *ghttp.RouterGroup) {
 				group.GET("/", api.Checkin.ListCheckinRecordByCourseId)
 				group.POST("/", api.Checkin.StartCheckIn)
-				group.DELETE("/", api.Checkin.DeleteCheckinRecord)
+				group.DELETE("/:id", api.Checkin.DeleteCheckinRecord)
 			})
 			group.Group("/detail", func(group *ghttp.RouterGroup) {
-				group.PUT("/", api.Checkin.CheckIn)
+				group.PUT("/", api.Checkin.UpdateCheckinDetail)
 				group.GET("/", api.Checkin.ListCheckinDetailByCheckInRecordId)
 			})
 			group.GET("/export", api.Checkin.ExportCheckinRecord)
 		})
 		group.Group("/course", func(group *ghttp.RouterGroup) {
-			group.GET("/is-enroll", api.Course.IsCourseEnroll)
-			group.GET("/enroll", api.Course.ListCourseEnroll)
+			group.GET("/join/is", api.Course.IsCourseEnroll)
+			group.GET("/join", api.Course.ListCourseEnroll)
+			group.POST("/join", api.Course.JoinClass)
 			group.GET("/teacher", api.Course.ListCourseByTeacherId)
 			group.GET("/:id", api.Course.GetOne)
 			group.DELETE("/:id", api.Course.Delete)
 			group.GET("/overview", api.Course.ListCourseStudentOverview)
-			group.GET("/search", api.Course.SearchCourseByCourseNameOrTeacherName)
+			group.GET("/search", api.Course.ListCourseByCourseName)
 			group.POST("/", api.Course.InsertCourse)
 			group.Group("/announcement", func(group *ghttp.RouterGroup) {
 				group.POST("/", api.CourseAnnouncement.Insert)
 				group.PUT("/", api.CourseAnnouncement.Update)
 				group.GET("/", api.CourseAnnouncement.ListByCourseId)
 				group.GET("/:id", api.CourseAnnouncement.GetOne)
-				group.DELETE("/", api.CourseAnnouncement.Delete)
+				group.DELETE("/:id", api.CourseAnnouncement.Delete)
 			})
 			group.GET("/open", api.Course.IsOpenByTeacherId)
 			group.Group("/student", func(group *ghttp.RouterGroup) {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/text/gstr"
+	"scnu-coding/app/dao"
 	"scnu-coding/app/system/web/internala/define"
 	"scnu-coding/app/utils"
 	"scnu-coding/library/enum/language_enum"
@@ -18,7 +19,7 @@ type iIDE interface {
 	// OpenIDE 启动或复用一个IDE容器
 	OpenIDE(ctx context.Context, req *define.OpenIDEReq) (url string, err error)
 	// RemoveIDE 关闭容器操作
-	RemoveIDE(ctx context.Context, req *define.CloseIDEReq) (err error)
+	RemoveIDE(ctx context.Context, req *define.IDEIdentifier) (err error)
 }
 
 //// idePortCache 记录每一个容器所占用
@@ -74,11 +75,31 @@ func getImageName(languageEnum int) (imageName string) {
 }
 
 func getWorkDirHostPath(_ context.Context, ident *define.IDEIdentifier) (workDirPath string) {
-	workDirPath = fmt.Sprintf("/home/horace/scnu_coding/%d/%d", ident.UserId, ident.LabId)
+	workspaceBasePathRemote := g.Cfg().GetString("ide.deployment.storage.workspaceBasePathRemote")
+	workDirPath = fmt.Sprintf("%s/%d/%d", workspaceBasePathRemote, ident.UserId, ident.LabId)
 	return workDirPath
 }
 
-func getConfigPath(_ context.Context, ident *define.IDEIdentifier, language int) (configPath string) {
-	configPath = fmt.Sprintf("/data/scnu_coding/%d/.config/%d", ident.UserId, language)
-	return configPath
+func getConfigPath(ctx context.Context, ident *define.IDEIdentifier) (configPath string, err error) {
+	configBasePathRemote := g.Cfg().GetString("ide.deployment.storage.configBasePathRemote")
+	language, err := getLanguageByLabId(ctx, ident.LabId)
+	if err != nil {
+		return "", err
+	}
+	configPath = fmt.Sprintf("%s/%d/.config/%d", configBasePathRemote, ident.UserId, language)
+	return configPath, err
+}
+
+func getLanguageByLabId(ctx context.Context, labId int) (language int, err error) {
+	// 找到课程
+	courseId, err := dao.Lab.Ctx(ctx).WherePri(labId).Value(dao.Lab.Columns.CourseId)
+	if err != nil {
+		return 0, err
+	}
+	// 找语言类型
+	languageType, err := dao.Course.Ctx(ctx).WherePri(courseId).Value(dao.Course.Columns.LanguageType)
+	if err != nil {
+		return 0, err
+	}
+	return languageType.Int(), nil
 }

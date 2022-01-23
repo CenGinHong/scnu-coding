@@ -10,6 +10,8 @@ import (
 	"encoding/csv"
 	"fmt"
 	"github.com/gogf/gf/database/gdb"
+	"github.com/gogf/gf/errors/gcode"
+	"github.com/gogf/gf/errors/gerror"
 	"github.com/gogf/gf/frame/g"
 	"scnu-coding/app/dao"
 	"scnu-coding/app/service"
@@ -48,9 +50,7 @@ func (c *courseService) ListCourseByTeacherId(ctx context.Context) (resp *respon
 	}
 	// 拼接地址
 	for _, record := range records {
-		if record.CoverImg != "" {
-			record.CoverImg = service.File.GetMinioAddr(ctx, record.CoverImg)
-		}
+		record.CoverImg = service.File.GetMinioAddr(ctx, record.CoverImg)
 	}
 	// 分页信息整合
 	resp = response.GetPageResp(records, total, nil)
@@ -88,9 +88,8 @@ func (c *courseService) ListCourseEnroll(ctx context.Context) (resp *response.Pa
 	}
 	// 拼接地址
 	for _, record := range records {
-		if record.CoverImg != "" {
-			record.CoverImg = service.File.GetMinioAddr(ctx, record.CoverImg)
-		}
+		record.CoverImg = service.File.GetMinioAddr(ctx, record.CoverImg)
+
 	}
 	// 分页信息整合
 	resp = response.GetPageResp(records, total, nil)
@@ -120,45 +119,20 @@ func (c courseService) DeleteCourse(ctx context.Context, courseId int) (err erro
 	return nil
 }
 
-//
-//// InsertCourse 插入课程
-//// @receiver receiver
-//// @params req
-//// @return err
-//// @date 2021-05-03 15:52:42
-//func (c *courseService) InsertCourse(ctx context.Context, req *define.InsertCourseReq) (err error) {
-//	saveModel := gconv.Map(req)
-//	ctxUser := service.Context.Get(ctx).User
-//	saveModel["UserId"] = ctxUser.UserId
-//	// 保存
-//	if _, err = dao.Course.Insert(saveModel); err != nil {
-//		return err
-//	}
-//	return nil
-//}
-
-// SearchCourseByCourseNameOrTeacherName 搜索课程
+// ListCourseByCourseName 搜索课程
 // @receiver receiver
 // @params ctx
 // @params courseName
 // @return resp
 // @return err
 // @date 2021-05-03 15:52:29
-func (c *courseService) SearchCourseByCourseNameOrTeacherName(ctx context.Context, courseNameOrTeacherName string) (resp *response.PageResp, err error) {
+func (c *courseService) ListCourseByCourseName(ctx context.Context, courseName string) (resp *response.PageResp, err error) {
 	ctxPageInfo := service.Context.Get(ctx).PageInfo
 	ctxUserInfo := service.Context.Get(ctx).User
 	d := dao.Course.Ctx(ctx).Page(ctxPageInfo.Current, ctxPageInfo.PageSize)
 	d = d.Where(dao.Course.Columns.IsClose, false)
-	if courseNameOrTeacherName != "" {
-		d = d.WhereLike(dao.Course.Columns.CourseName, "%"+courseNameOrTeacherName+"%")
-		teacherId, err := dao.SysUser.Ctx(ctx).WhereLike(dao.SysUser.Columns.Username, "%"+courseNameOrTeacherName+"%").
-			Array(dao.SysUser.Columns.UserId)
-		if err != nil {
-			return nil, err
-		}
-		if len(teacherId) > 0 {
-			d = d.WhereOr(dao.Course.Columns.UserId, teacherId)
-		}
+	if courseName != "" {
+		d = d.WhereLike(dao.Course.Columns.CourseName, "%"+courseName+"%")
 	}
 	total, err := d.Count()
 	if err != nil {
@@ -178,9 +152,7 @@ func (c *courseService) SearchCourseByCourseNameOrTeacherName(ctx context.Contex
 	}
 	// 拼接地址
 	for _, record := range records {
-		if record.CoverImg != "" {
-			record.CoverImg = service.File.GetMinioAddr(ctx, record.CoverImg)
-		}
+		record.CoverImg = service.File.GetMinioAddr(ctx, record.CoverImg)
 	}
 	// 分页信息整合
 	resp = response.GetPageResp(records, total, nil)
@@ -365,7 +337,7 @@ func (c *courseService) IsOpenByTeacherId(ctx context.Context, courseId int) (is
 	return isOpen, nil
 }
 
-func (c *courseService) CreateCourse(ctx context.Context, req *define.CreateCourseReq) (id int64, err error) {
+func (c *courseService) InsertCourse(ctx context.Context, req *define.InsertCourseReq) (id int64, err error) {
 	ctxUser := service.Context.Get(ctx).User
 	// 置入教师id
 	req.UserId = ctxUser.UserId
@@ -374,6 +346,29 @@ func (c *courseService) CreateCourse(ctx context.Context, req *define.CreateCour
 		return 0, err
 	}
 	return id, nil
+}
+
+func (c courseService) JoinClass(ctx context.Context, req *define.JoinClassReq) error {
+	if req.UserId == 0 {
+		ctxUser := service.Context.Get(ctx).User
+		req.UserId = ctxUser.UserId
+	}
+	// 比对课程密钥
+	secretKey, err := dao.Course.Ctx(ctx).Where(req.CourseId).Value(dao.Course.Columns.SecretKey)
+	if err != nil {
+		return err
+	}
+	if secretKey.String() != req.SecretKey {
+		return gerror.NewCode(gcode.CodeValidationFailed, "课程验证码错误")
+	}
+	// 插入选课信息
+	if _, err = dao.ReCourseUser.Ctx(ctx).Insert(g.Map{
+		dao.ReCourseUser.Columns.CourseId: req.CourseId,
+		dao.ReCourseUser.Columns.UserId:   req.UserId,
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *courseService) RemoveStudentFromClass() {

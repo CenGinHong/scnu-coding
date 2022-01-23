@@ -28,7 +28,7 @@ type LabDetailResp struct {
 	} `orm:"with:course_id" json:"courseDetail"` //这里注意不要都with
 	Title           string `orm:"title" json:"title"`     // 实验标题
 	Content         string `orm:"content" json:"content"` // 实验内容描述
-	LabSubmitDetail *struct {
+	LabSubmitDetail struct {
 		gmeta.Meta       `orm:"table:lab_submit"`
 		LabId            int    `orm:"lab_id" json:"-"`                            // 主键
 		LabSubmitId      int    `orm:"lab_submit_id" json:"labSubmitId"`           //

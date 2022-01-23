@@ -19,6 +19,7 @@ func Init() {
 			group.GET("/", api.Course.ListAllCourse)
 			group.Group("/enroll", func(group *ghttp.RouterGroup) {
 				group.GET("/", api.Course.ListCourseEnroll)
+				group.DELETE("/", api.Course.RemoveCourseEnroll)
 			})
 		})
 		group.Group("/lab", func(group *ghttp.RouterGroup) {
@@ -26,6 +27,12 @@ func Init() {
 		})
 		group.Group("/submit", func(group *ghttp.RouterGroup) {
 			group.GET("/", api.LabSubmit.ListAllSubmitByLabId)
+		})
+		group.Group("/ide", func(group *ghttp.RouterGroup) {
+			group.GET("/", api.IDE.ListAllIDE)
+			group.PUT("/", api.IDE.RestartIDE)
+			group.DELETE("/", api.IDE.RemoveIDE)
+			group.GET("/server", api.IDE.GetServerInfo)
 		})
 	})
 }

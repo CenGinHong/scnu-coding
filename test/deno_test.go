@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/gogf/gf/os/gcache"
 	"github.com/gogf/gf/os/gtime"
 	helmclient "github.com/mittwald/go-helm-client"
 	"helm.sh/helm/v3/pkg/repo"
 	"io/ioutil"
 	"scnu-coding/app/dao"
 	"scnu-coding/app/model"
-	"scnu-coding/app/system/admin/internala/service"
 	"scnu-coding/app/utils"
 	"testing"
 )
@@ -121,7 +122,8 @@ func TestDocker(t *testing.T) {
 
 	containers, err := utils.DockerUtil.ListContainer(context.Background(), types.ContainerListOptions{
 		//Filters:fil,
-		All: true,
+		All:     false,
+		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: "ide-2-8"}),
 	})
 	if err != nil {
 		print(err)
@@ -129,13 +131,16 @@ func TestDocker(t *testing.T) {
 	for _, container := range containers {
 		fmt.Print(container.Ports[0])
 	}
-
 }
 
 func TestIDE(t *testing.T) {
-	container, err := service.IDE.ListContainer(context.Background())
+	cache := gcache.New()
+	set, err := cache.GetOrSet("1", "2", 0)
 	if err != nil {
 		return
 	}
-	fmt.Println(container)
+	if err != nil {
+		return
+	}
+	fmt.Println(set)
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/gogf/gf/frame/g"
 	"scnu-coding/app/dao"
 	"scnu-coding/app/service"
 	"scnu-coding/app/system/admin/internala/define"
@@ -64,28 +65,18 @@ func (s *courseService) ListEnroll(ctx context.Context, courseId int) (resp *res
 	if err = d.Scan(&records); err != nil {
 		return nil, err
 	}
-	// 筛选集
-	filter := make(map[string][]*response.FilterType, 0)
-	// 查找所有可筛选项 gender, grade, school, organization,major
-	filterFields := []string{dao.SysUser.Columns.Gender, dao.SysUser.Columns.Grade,
-		dao.SysUser.Columns.School, dao.SysUser.Columns.Organization, dao.SysUser.Columns.Major}
-	for _, fields := range filterFields {
-		array, err := dao.SysUser.Ctx(ctx).Distinct().FindArray(fields)
-		if err != nil {
-			return nil, err
-		}
-		tempFilter := make([]*response.FilterType, 0)
-		for _, value := range array {
-			tempFilter = append(tempFilter, &response.FilterType{
-				Text:     value.String(),
-				Value:    value.String(),
-				Children: nil,
-			})
-		}
-		filter[fields] = tempFilter
-	}
-	resp = response.GetPageResp(records, total, filter)
+	resp = response.GetPageResp(records, total, nil)
 	return resp, nil
+}
+
+func (s *courseService) RemoveCourseEnroll(ctx context.Context, req *define.RemoveCourseEnrollReq) (err error) {
+	if _, err = dao.ReCourseUser.Ctx(ctx).Where(g.Map{
+		dao.ReCourseUser.Columns.UserId:   req.UserId,
+		dao.ReCourseUser.Columns.CourseId: req.CourseId,
+	}).Delete(); err != nil {
+		return err
+	}
+	return nil
 }
 
 //func (s *courseService) ListAllCourse(ctx context.Context) (resp *response.PageResp, err error) {

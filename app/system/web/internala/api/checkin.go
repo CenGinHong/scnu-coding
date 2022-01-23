@@ -76,7 +76,7 @@ func (a *checkinAPI) StuListCheckinRecords(r *ghttp.Request) {
 // @param r *ghttp.Request
 // @date 2021-08-04 16:49:10
 func (a *checkinAPI) ListCheckinDetailByCheckInRecordId(r *ghttp.Request) {
-	checkInRecordId := r.GetInt("checkInRecordId")
+	checkInRecordId := r.GetInt("checkinRecordId")
 	resp, err := service.Checkin.ListCheckinDetailByCheckInRecordId(r.Context(), checkInRecordId)
 	if err != nil {
 		response.Exit(r, err)
@@ -91,7 +91,7 @@ func (a *checkinAPI) ListCheckinDetailByCheckInRecordId(r *ghttp.Request) {
 // @date 2021-08-04 16:49:57
 func (a *checkinAPI) UpdateCheckinDetail(r *ghttp.Request) {
 	var req *define.UpdateCheckinDetailReq
-	if err := r.Parse(req); err != nil {
+	if err := r.Parse(&req); err != nil {
 		response.Exit(r, err)
 		return
 	}
@@ -124,8 +124,8 @@ func (a *checkinAPI) CheckIn(r *ghttp.Request) {
 // @param r *ghttp.Request
 // @date 2021-08-04 16:53:54
 func (a *checkinAPI) DeleteCheckinRecord(r *ghttp.Request) {
-	checkinRecordIds := r.GetArray("checkinRecordIds")
-	if err := service.Checkin.DeleteCheckinRecord(r.Context(), checkinRecordIds); err != nil {
+	id := r.GetInt("id")
+	if err := service.Checkin.DeleteCheckinRecord(r.Context(), id); err != nil {
 		response.Exit(r, err)
 		return
 	}

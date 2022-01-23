@@ -61,12 +61,9 @@
         user = "root"
         pass = "TefmYnzGKFVa"
     # 代码存储的主机，如果是docker环境
-#    [ide.storage]
-#        host = "localhost"
-#        user = "horace"
-#        pass = "scipio"
-#        workspaceBasePathRemote = "/mnt/code-platform"
-#        workspaceBasePathLocal = ""
+    [ide.deployment.storage]
+        workspaceBasePathRemote = "/home/horace/scnu_coding"
+        configBasePathRemote = "/home/horace/scnu_coding"
     [ide.container.connect]
         port = "8199"
         ip = "10.50.1.184"

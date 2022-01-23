@@ -28,7 +28,8 @@ type StartCheckInReq struct {
 }
 
 type UpdateCheckinDetailReq struct {
-	CheckinDetailId int
+	UserId          int
+	CheckinRecordId int
 	IsCheckin       bool
 }
 
@@ -46,10 +47,9 @@ type CheckinDetailResp struct {
 		UserNum    string `orm:"user_num" json:"userNum"`  // 学号/职工号，限20位
 		Username   string `orm:"username" json:"username"` // 真实姓名，限10字
 	} `orm:"with:user_id" json:"userDetail"`
-	CheckinDetail *struct {
-		UserId          int `orm:"user_id" json:"-"`                         // 主键
-		CheckinDetailId int `orm:"checkin_detail_id" json:"checkinDetailId"` // 签到id
-		IsCheckin       int `orm:"is_checkin" json:"isCheckin"`              // 是否已经签到
+	CheckinDetail struct {
+		UserId    int  `orm:"user_id" json:"-"`            // 主键
+		IsCheckin bool `orm:"is_checkin" json:"isCheckin"` // 是否已经签到
 	} `json:"checkinDetail"`
 }
 

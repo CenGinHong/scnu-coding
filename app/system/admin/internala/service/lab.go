@@ -19,7 +19,6 @@ func (s *labService) ListAllLab(ctx context.Context) (resp *response.PageResp, e
 	// 获取分页信息
 	pageInfo := service.Context.Get(ctx).PageInfo
 	records := make([]*define.Lab, 0)
-
 	d := dao.Lab.Ctx(ctx)
 	if pageInfo != nil {
 		// 筛选条件
@@ -40,9 +39,7 @@ func (s *labService) ListAllLab(ctx context.Context) (resp *response.PageResp, e
 		return nil, err
 	}
 	for _, record := range records {
-		if record.AttachmentSrc != "" {
-			record.AttachmentSrc = service.File.GetMinioAddr(ctx, record.AttachmentSrc)
-		}
+		record.AttachmentSrc = service.File.GetMinioAddr(ctx, record.AttachmentSrc)
 	}
 	// 构建筛选集
 	courseModels := make([]model.Course, 0)

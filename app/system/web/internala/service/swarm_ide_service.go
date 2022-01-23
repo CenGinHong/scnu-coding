@@ -17,7 +17,7 @@ func newSwarmService() (s *swarmIDEService) {
 	return s
 }
 
-func (s *swarmIDEService) removeIDE(ctx context.Context, req *define.CloseIDEReq) (err error) {
+func (s *swarmIDEService) removeIDE(ctx context.Context, req *define.IDEIdentifier) (err error) {
 	//if err = s.execStopAndRemoveTheiaDocker(req); err != nil {
 	//	return err
 	//}

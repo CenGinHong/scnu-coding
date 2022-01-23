@@ -25,7 +25,6 @@ func init() {
 		group.GET("/", api.Hello.Index)
 		group.POST("/upload", api.Hello.Index1)
 		group.GET("/start", api.Hello.Index1)
-		group.GET("/stop", api.Hello.Index2)
 	})
 	s.Group("/file", func(group *ghttp.RouterGroup) {
 		group.POST("/", api.File.UploadFile)
@@ -34,4 +33,8 @@ func init() {
 	s.Group("/common", func(group *ghttp.RouterGroup) {
 		group.POST("/verCode", api.Common.SendVerCode)
 	})
+	//s.Group("/chat", func(group *ghttp.RouterGroup) {
+	//	group.ALL("/", api.Hello.Index1)
+	//})
+	s.BindHandler("/chat", api.Hello.Index1)
 }

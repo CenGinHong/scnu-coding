@@ -15,7 +15,7 @@ func (k *k3sIDEService) OpenIDE(ctx context.Context, req *define.OpenIDEReq) (ur
 	return "", err
 }
 
-func (k *k3sIDEService) RemoveIDE(ctx context.Context, req *define.CloseIDEReq) (err error) {
+func (k *k3sIDEService) RemoveIDE(ctx context.Context, req *define.IDEIdentifier) (err error) {
 	panic("implement me")
 }
 

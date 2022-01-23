@@ -182,13 +182,12 @@ func (l *labSummitService) ListLabSummitId(ctx context.Context, labId int) (resp
 // @return err
 // @date 2021-04-21 10:19:20
 func (l *labSummitService) UpdateScoreAndComment(ctx context.Context, req *define.UpdateLabSummitScoreAndCommentReq) (err error) {
-	if _, err = dao.LabSubmit.Ctx(ctx).Where(g.Map{
-		dao.LabSubmit.Columns.UserId: req.UserId,
-		dao.LabSubmit.Columns.LabId:  req.LabId,
-	}).Data(g.Map{
+	if _, err = dao.LabSubmit.Ctx(ctx).Data(g.Map{
 		dao.LabSubmit.Columns.LabSubmitComment: req.Comment,
 		dao.LabSubmit.Columns.Score:            req.Score,
-	}).Update(); err != nil {
+		dao.LabSubmit.Columns.UserId:           req.UserId,
+		dao.LabSubmit.Columns.LabId:            req.LabId,
+	}).Save(); err != nil {
 		return err
 	}
 	return nil

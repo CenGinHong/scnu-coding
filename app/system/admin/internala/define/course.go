@@ -25,17 +25,15 @@ type ListCourseResp struct {
 
 // CourseEnroll 选课的学生
 type CourseEnroll struct {
-	//UserId     int `orm:"user_id"         json:"userId"`
-	//UserDetail struct {
-	gmeta.Meta   `orm:"table:sys_user"`
 	UserId       int    `orm:"a.user_id"         json:"userId"`     // 用户id
 	Email        string `orm:"email"           json:"email"`        // 邮箱，限30字
 	UserNum      string `orm:"user_num"        json:"userNum"`      // 学号/职工号，限20位
-	Grade        int    `orm:"grade"           json:"grade"`        // 年级
-	School       string `orm:"school"          json:"school"`       // 学院
-	Gender       int    `orm:"gender"          json:"gender"`       // 性别
 	Major        string `orm:"major"           json:"major"`        // 专业
 	Username     string `orm:"username"        json:"username"`     // 真实姓名，限6字
 	Organization string `orm:"organization"    json:"organization"` // 单位，例如计算机学院，限15字
-	//} `orm:"with:user_id" json:"userDetail"`
+}
+
+type RemoveCourseEnrollReq struct {
+	UserId   int
+	CourseId int
 }

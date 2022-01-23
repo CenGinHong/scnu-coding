@@ -19,7 +19,10 @@ type IDEIdentifier struct {
 	LabId  int
 }
 
-type CloseIDEReq = IDEIdentifier
+type FrontAliveReq struct {
+	IDEIdentifier
+	IsOpen bool // 打开/关闭页面
+}
 
 // ContainerStat 有些不会怎么用到的字段我先注释了
 type ContainerStat struct {
