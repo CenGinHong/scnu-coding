@@ -4,6 +4,7 @@ import (
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
 	"scnu-coding/app/system/web/internala/api"
+	"scnu-coding/app/utils"
 )
 
 // @Author: 陈健航
@@ -14,6 +15,7 @@ import (
 func Init() {
 	s := g.Server()
 	s.Group("/web", func(group *ghttp.RouterGroup) {
+		utils.GfToken.Middleware(group)
 		group.Group("/user", func(group *ghttp.RouterGroup) {
 			// 获取自己的用户信息
 			group.GET("/myself", api.User.GetUserInfo)
@@ -67,6 +69,7 @@ func Init() {
 				group.POST("/", api.Course.ImportStudent2Class)
 			})
 			group.PUT("/", api.Course.UpdateCourse)
+			group.GET("/score", api.Course.ListOneScore)
 		})
 		group.Group("/lab", func(group *ghttp.RouterGroup) {
 			group.GET("/", api.Lab.ListByCourseId)

@@ -144,10 +144,17 @@ func (l *labSummitService) ListLabSummit(ctx context.Context, labId int) (resp *
 	if err = d.WithAll().Scan(&records); err != nil {
 		return nil, err
 	}
-	if err = dao.LabSubmit.Ctx(ctx).Where(dao.LabSubmit.Columns.LabId, labId).Where(dao.LabSubmit.Columns.UserId,
-		gdb.ListItemValuesUnique(records, "UserId")).Fields(define.ListLabSubmitResp{}.LabSubmitDetail).
+	if err = dao.LabSubmit.Ctx(ctx).
+		Where(g.Map{
+			dao.LabSubmit.Columns.UserId: gdb.ListItemValuesUnique(records, "UserId"),
+			dao.LabSubmit.Columns.LabId:  labId,
+		}).
+		Fields(define.ListLabSubmitResp{}.LabSubmitDetail).
 		ScanList(&records, "LabSubmitDetail", "user_id:UserId"); err != nil {
 		return nil, err
+	}
+	for _, r := range records {
+		r.IsIDERunning = IDE.IsIDERunning(r.UserId, labId)
 	}
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil

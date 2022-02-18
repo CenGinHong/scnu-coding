@@ -25,12 +25,33 @@ type labService struct{}
 // @return err
 // @return err
 // @date 2021-05-05 00:14:12
-func (l *labService) InsertLab(ctx context.Context, req *define.InsertLabReq) (labId int64, err error) {
-	labId, err = dao.Lab.Ctx(ctx).Data(req).InsertAndGetId()
-	if err != nil {
-		return 0, err
+func (l *labService) InsertLab(ctx context.Context, req *define.InsertLabReq) (err error) {
+	if err = g.DB().Transaction(ctx, func(ctx context.Context, tx *gdb.TX) error {
+		// 插入新数据
+		labId, err := dao.Lab.Ctx(ctx).TX(tx).
+			Data(req).
+			InsertAndGetId()
+		if err != nil {
+			return err
+		}
+		// 如果文件就插入文件
+		if req.UploadFile != nil {
+			filename, err := service.File.UploadFile(ctx, req.UploadFile)
+			if err != nil {
+				return err
+			}
+			if _, err = dao.Lab.Ctx(ctx).TX(tx).
+				WherePri(labId).
+				Data(g.Map{dao.Lab.Columns.AttachmentSrc: filename}).
+				Update(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
-	return labId, nil
+	return nil
 }
 
 // ListLabByCourseId 课程详情页查询分页列表实验
@@ -56,9 +77,10 @@ func (l *labService) ListLabByCourseId(ctx context.Context, courseId int) (resp 
 	if err = d.With(define.LabDetailResp{}.LabSubmitDetail).Scan(&records); err != nil {
 		return nil, err
 	}
-	// 拼接地址
-	for _, record := range records {
-		record.AttachmentSrc = service.File.GetMinioAddr(ctx, record.AttachmentSrc)
+	for _, r := range records {
+		if r.AttachmentSrc != "" {
+			r.AttachmentSrc = service.File.GetObjectUrl(ctx, r.AttachmentSrc)
+		}
 	}
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil
@@ -71,9 +93,49 @@ func (l *labService) ListLabByCourseId(ctx context.Context, courseId int) (resp 
 // @return err
 // @date 2021-05-05 13:11:21
 func (l *labService) Update(ctx context.Context, req *define.UpdateLabReq) (err error) {
-	if _, err = dao.Lab.Ctx(ctx).OmitNilData().WherePri(req.LabId).Update(req); err != nil {
+	if err = g.DB().Transaction(ctx, func(ctx context.Context, tx *gdb.TX) error {
+		// 移除旧的文件
+		if req.IsRemoveFile {
+			attachmentSrc, err := dao.Lab.Ctx(ctx).TX(tx).
+				WherePri(req.LabId).
+				Value(dao.Lab.Columns.AttachmentSrc)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				if err != nil {
+					_ = service.File.RemoveObject(ctx, attachmentSrc.String())
+				}
+			}()
+			if _, err = dao.Lab.Ctx(ctx).TX(tx).
+				WherePri(req.LabId).
+				Data(g.Map{dao.Lab.Columns.AttachmentSrc: ""}).
+				Update(); err != nil {
+				return err
+			}
+		}
+		if req.UploadFile != nil {
+			filename, err := service.File.UploadFile(ctx, req.UploadFile)
+			if err != nil {
+				return err
+			}
+			if _, err = dao.Lab.Ctx(ctx).TX(tx).
+				WherePri(req.LabId).
+				Data(g.Map{dao.Lab.Columns.AttachmentSrc: filename}).
+				Update(); err != nil {
+				return err
+			}
+		}
+		if _, err = dao.Lab.Ctx(ctx).TX(tx).
+			WherePri(req.LabId).
+			Update(req); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
+
 	return nil
 }
 

@@ -18,9 +18,9 @@ func (s *serviceMiddleware) Ctx(r *ghttp.Request) {
 	// 初始化，务必最开始执行
 	customCtx := &model.Context{}
 	Context.Init(r, customCtx)
-	if r.RequestURI != "/login" {
-		data := utils.GfToken.GetTokenData(r)
-		contextUser := &model.ContextUser{}
+	contextUser := &model.ContextUser{}
+	data := utils.GfToken.GetTokenData(r)
+	if data.Get("data") != nil {
 		_ = gconv.Struct(data.Get("data"), &contextUser)
 		customCtx.User = contextUser
 	}

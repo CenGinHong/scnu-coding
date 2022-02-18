@@ -18,15 +18,17 @@ func init() {
 	s.BindMiddlewareDefault(service.Middleware.CORS)
 	s.Group("/", func(group *ghttp.RouterGroup) {
 		utils.GfToken.Middleware(group)
-		group.ALL("/hello", api.Hello.Index)
+		group.ALL("/hello/:id", api.Hello.Index)
 	})
 	s.Group("/test", func(group *ghttp.RouterGroup) {
-		group.GET("/hello", api.Hello.Index)
+		group.GET("/hello/:id", api.Hello.Index)
 		group.GET("/", api.Hello.Index)
 		group.POST("/upload", api.Hello.Index1)
 		group.GET("/start", api.Hello.Index1)
 	})
 	s.Group("/file", func(group *ghttp.RouterGroup) {
+		group.GET("/", api.File.GetObjectUrl)
+		group.GET("/presigned", api.File.GetObjectPresignedUrl)
 		group.POST("/", api.File.UploadFile)
 		group.DELETE("/", api.File.RemoveFile)
 	})

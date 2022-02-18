@@ -32,7 +32,7 @@
     endpoint = "localhost:9000"
     accessKeyId = "horace"
     secretAccessKey = "scipio1322?"
-    bucketName = "scnu-coding"
+    bucket = "scnu-coding"
     location = "cn-north-1"
     protocol = "http"
 
@@ -44,7 +44,7 @@
     deploymentType = "docker"
     # docker运行的主机
     [ide.deployment.docker]
-        host = "10.50.3.213"
+        host = "192.168.0.110"
         port = "2375"
         protocol = "tcp"
         [ide.deployment.docker.tls]
@@ -66,7 +66,7 @@
         configBasePathRemote = "/home/horace/scnu_coding"
     [ide.container.connect]
         port = "8199"
-        ip = "10.50.1.184"
+        ip = "localhost"
         openPath = "/web/ide/open"
         endPath = "/web/ide/end"
     [ide.container.config]

@@ -248,6 +248,20 @@ func (c *courseAPI) ListCourseByCourseName(r *ghttp.Request) {
 	response.Succ(r, resp)
 }
 
+func (c *courseAPI) ListOneScore(r *ghttp.Request) {
+	var req *define.ListOneStudentScoreReq
+	if err := r.Parse(&req); err != nil {
+		response.Exit(r, err)
+		return
+	}
+	resp, err := service.Course.ListOneStudentScore(r.Context(), req)
+	if err != nil {
+		response.Exit(r, err)
+		return
+	}
+	response.Succ(r, resp)
+}
+
 //
 //func (c *courseAPI) ListAllCourse(r *ghttp.Request) {
 //	resp, err := service.Course.ListAllCourse(r.Context())

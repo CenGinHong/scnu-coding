@@ -1,12 +1,17 @@
 package service
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/csv"
 	"github.com/gogf/gf/errors/gerror"
 	"github.com/gogf/gf/net/ghttp"
+	"github.com/gogf/gf/os/glog"
+	"github.com/gogf/gf/util/gvalid"
+	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/bcrypt"
+	"mime/multipart"
 	"scnu-coding/app/dao"
 	"scnu-coding/app/model"
 	"scnu-coding/app/service"
@@ -14,6 +19,7 @@ import (
 	"scnu-coding/app/utils"
 	"scnu-coding/library/response"
 	"strconv"
+	"strings"
 )
 
 var SysUser = userService{}
@@ -77,18 +83,16 @@ func (s *userService) GetAllUser(ctx context.Context) (resp *response.PageResp, 
 	return resp, nil
 }
 
-func (s userService) GetAllStudent(ctx context.Context, role int) (resp *response.PageResp, err error) {
+func (s *userService) ListUser(ctx context.Context) (resp *response.PageResp, err error) {
 	// 获取分页信息
 	pageInfo := service.Context.Get(ctx).PageInfo
-	records := make([]*define.SysUserResp, 0)
-
+	records := make([]*model.SysUser, 0)
 	d := dao.SysUser.Ctx(ctx)
-	d = d.Where(dao.SysUser.Columns.RoleId, role)
 
 	// 筛选集
 	filter := make(map[string][]*response.FilterType, 0)
 	// 查找所有可筛选项 gender, grade, school, organization,major
-	filterFields := []string{dao.SysUser.Columns.Gender, dao.SysUser.Columns.Grade,
+	filterFields := []string{dao.SysUser.Columns.Gender,
 		dao.SysUser.Columns.School, dao.SysUser.Columns.Organization, dao.SysUser.Columns.Major}
 	for _, fields := range filterFields {
 		array, err := d.Distinct().FindArray(fields)
@@ -126,6 +130,14 @@ func (s userService) GetAllStudent(ctx context.Context, role int) (resp *respons
 	}
 
 	resp = response.GetPageResp(records, total, filter)
+	return resp, nil
+}
+
+func (s *userService) GetUser(ctx context.Context, userId int) (resp *model.SysUser, err error) {
+	resp = &model.SysUser{}
+	if err = dao.SysUser.Ctx(ctx).WherePri(userId).Scan(&resp); err != nil {
+		return nil, err
+	}
 	return resp, nil
 }
 
@@ -182,64 +194,92 @@ func (s userService) GetStudentImportTemplate(_ context.Context) (templateFile *
 	return templateFile, nil
 }
 
-func (s userService) ImportStudent(ctx context.Context, template *ghttp.UploadFile, isOverWrite bool) (err error) {
+func (s *userService) ImportStudent(ctx context.Context, template *ghttp.UploadFile, roleId int) (errMsg string, err error) {
 	file, err := template.Open()
 	if err != nil {
-		return err
+		return "", err
 	}
-	file1, err := utils.RemoveBom(file)
+	defer func(file multipart.File) {
+		if err = file.Close(); err != nil {
+			glog.Error(err)
+		}
+	}(file)
+	reader, err := excelize.OpenReader(bufio.NewReader(file))
 	if err != nil {
-		return err
+		return "", err
 	}
-	reader := csv.NewReader(file1)
-	rows, err := reader.ReadAll()
+	rows, err := reader.GetRows("sheet1")
 	if err != nil {
-		return err
+		return "", err
 	}
-	userDatas := make([]*define.ImportStudent, 0)
-	for i, row := range rows {
-		if i == 0 {
+	rows = rows[1:]
+	insertData := make([]*define.ImportStudent, 0)
+	sb := &strings.Builder{}
+	for _, r := range rows {
+		username := r[0]
+		userNum := r[1]
+		// 是否覆写已存在得用户，如果不覆写查到数据库有这条就直接跳过
+		userId, err := dao.SysUser.Ctx(ctx).Where(dao.SysUser.Columns.UserNum, userNum).Value(dao.SysUser.Columns.UserId)
+		if err != nil {
+			return "", err
+		}
+		if !userId.IsNil() {
 			continue
 		}
-		userNum := row[1]
-		// 是否覆写已存在得用户，如果不覆写查到数据库有这条就直接跳过
-		if !isOverWrite {
-			count, err := dao.SysUser.Ctx(ctx).WherePri(dao.SysUser.Columns.UserNum, userNum).Count()
-			if err != nil {
-				return err
-			}
-			if count > 0 {
-				continue
-			}
-		}
-		var gender int
-		if row[2] == "男" {
-			gender = 1
-		} else if row[2] == "女" {
-			gender = 2
-		}
-		password := row[6]
-		var hashedPassword []byte
-		if password == "" {
-			//默认以学号做密码
-			password = userNum
-		}
-		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		email := r[2]
+		school := r[3]
+		major := r[4]
+		organization := r[5]
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userNum), bcrypt.DefaultCost)
 		if err != nil {
-			return err
+			return "", err
 		}
 		userData := &define.ImportStudent{
-			Username:     row[0],
+			RoleId:       roleId,
+			Username:     username,
 			UserNum:      userNum,
-			Gender:       gender,
-			Email:        row[3],
-			Organization: row[4],
-			Major:        row[5],
+			Email:        email,
+			Organization: organization,
+			Major:        major,
+			School:       school,
 			Password:     string(hashedPassword),
 		}
-		userDatas = append(userDatas, userData)
+		if err = gvalid.CheckStruct(ctx, userData, nil); err != nil {
+			sb.WriteString(err.Error())
+			sb.WriteString("/n")
+			continue
+		}
+		insertData = append(insertData, userData)
 	}
-	if _, err = dao.SysUser.Ctx(ctx).Data(userDatas).Batch(len(userDatas)).Insert(); err != nil {
+	if len(insertData) > 0 {
+		if _, err = dao.SysUser.Ctx(ctx).Data(insertData).Batch(len(insertData)).Insert(); err != nil {
+			return "", err
+		}
+	}
+	return sb.String(), nil
+}
+
+func (s *userService) GetImportDemoCsv(_ context.Context) (buffer *bytes.Buffer, err error) {
+	f := excelize.NewFile()
+	_ = f.NewSheet("Sheet1")
+	defer func(f *excelize.File) {
+		if err := f.Close(); err != nil {
+			glog.Error(err)
+		}
+	}(f)
+	header := []string{"姓名", "学号", "邮箱", "学院", "专业", "班级"}
+	if err = f.SetSheetRow("Sheet1", "A1", &header); err != nil {
+		return nil, err
+	}
+	buffer, err = f.WriteToBuffer()
+	if err != nil {
+		return nil, err
+	}
+	return buffer, nil
+}
+
+func (s *userService) DeleteUser(ctx context.Context, userId int) (err error) {
+	if _, err = dao.SysUser.Ctx(ctx).WherePri(userId).Delete(); err != nil {
 		return err
 	}
 	return nil

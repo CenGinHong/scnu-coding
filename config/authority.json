@@ -1,0 +1,335 @@
+[
+  {
+    "path": "/web/checkin/detail",
+    "method": "GET",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/checkin/detail",
+    "method": "PUT",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/checkin/export",
+    "method": "GET",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/checkin/record",
+    "method": "GET",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/checkin/record",
+    "method": "POST",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/checkin/record/:id",
+    "method": "DELETE",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/checkin/status",
+    "method": "GET",
+    "allow": [
+      2
+    ]
+  },
+  {
+    "path": "/web/checkin/student",
+    "method": "GET",
+    "allow": [
+      2
+    ]
+  },
+  {
+    "path": "/web/comment/course",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/comment/course",
+    "method": "POST",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/comment/lab",
+    "method": "DELETE",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/comment/lab",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/comment/lab",
+    "method": "POST",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/course",
+    "method": "POST",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/course",
+    "method": "PUT",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/course/:id",
+    "method": "DELETE",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/course/:id",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/course/announcement",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/course/announcement",
+    "method": "POST",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/course/announcement",
+    "method": "PUT",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/course/announcement/:id",
+    "method": "DELETE",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/course/announcement/:id",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/course/join",
+    "method": "GET",
+    "allow": [
+      2
+    ]
+  },
+  {
+    "path": "/web/course/join",
+    "method": "POST",
+    "allow": [
+      2
+    ]
+  },
+  {
+    "path": "/web/course/join/is",
+    "method": "GET",
+    "allow": [
+      2
+    ]
+  },
+  {
+    "path": "/web/course/open",
+    "method": "GET"
+  },
+  {
+    "path": "/web/course/overview",
+    "method": "GET",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/course/score",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/course/search",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/course/student",
+    "method": "GET",
+    "allow": [
+      2
+    ]
+  },
+  {
+    "path": "/web/course/teacher",
+    "method": "GET",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/lab",
+    "method": "DELETE",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/lab",
+    "method": "POST",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/lab",
+    "method": "PUT",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/lab/:id",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/submit",
+    "method": "GET",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/submit",
+    "method": "POST",
+    "allow": [
+      2
+    ]
+  },
+  {
+    "path": "/web/submit/code",
+    "method": "GET",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/submit/correct",
+    "method": "POST",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/submit/export",
+    "method": "GET",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/submit/id",
+    "method": "GET",
+    "allow": [
+      1
+    ]
+  },
+  {
+    "path": "/web/submit/report",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/submit/report",
+    "method": "PUT",
+    "allow": [
+      2
+    ]
+  },
+  {
+    "path": "/web/user",
+    "method": "POST",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/user/coding-time",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  },
+  {
+    "path": "/web/user/myself ",
+    "method": "GET",
+    "allow": [
+      1,
+      2
+    ]
+  }
+]

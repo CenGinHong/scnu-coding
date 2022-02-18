@@ -35,7 +35,7 @@ func newIDE() (t iIDE) {
 	// 获取配置文件中填入的配置方式
 	switch g.Cfg().GetString("ide.deploymentType") {
 	case "docker":
-		t = newDockerIDEService()
+		//t = newDockerIDEService()
 	//case "k3s":
 	//	t = newK3sIDEService()
 	case "swarmIDEService":

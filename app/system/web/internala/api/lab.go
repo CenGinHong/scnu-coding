@@ -31,12 +31,13 @@ func (l labApi) Insert(r *ghttp.Request) {
 		response.Exit(r, err)
 		return
 	}
-	id, err := service.Lab.InsertLab(r.Context(), req)
+	req.UploadFile = r.GetUploadFile("file")
+	err := service.Lab.InsertLab(r.Context(), req)
 	if err != nil {
 		response.Exit(r, err)
 		return
 	}
-	response.Succ(r, id)
+	response.Succ(r)
 }
 
 func (l *labApi) Update(r *ghttp.Request) {
@@ -45,6 +46,7 @@ func (l *labApi) Update(r *ghttp.Request) {
 		response.Exit(r, err)
 		return
 	}
+	req.UploadFile = r.GetUploadFile("file")
 	if err := service.Lab.Update(r.Context(), req); err != nil {
 		response.Exit(r, err)
 		return

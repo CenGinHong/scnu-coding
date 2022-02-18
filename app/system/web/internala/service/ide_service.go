@@ -37,7 +37,7 @@ func newIDEService() iDEService {
 	i.ide = newIDE()
 	i.ideAliveCache = *utils.NewMyCache()
 	i.lock = utils.NewMyMutex()
-	i.removeAllIDE()
+	//i.removeAllIDE()
 	return i
 }
 
@@ -185,4 +185,13 @@ func (t *iDEService) removeAllIDE() {
 		}(container)
 	}
 	wg.Wait()
+}
+
+func (t *iDEService) IsIDERunning(userId int, labId int) (isExist bool) {
+	containerName := fmt.Sprintf("ide-%d-%d", userId, labId)
+	isExist, err := t.ideAliveCache.Contains(containerName)
+	if err != nil {
+		return
+	}
+	return isExist
 }

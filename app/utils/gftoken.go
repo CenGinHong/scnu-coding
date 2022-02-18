@@ -4,8 +4,13 @@ import (
 	"context"
 	"errors"
 	"github.com/goflyfox/gtoken/gtoken"
+	"github.com/gogf/gf/encoding/gjson"
+	"github.com/gogf/gf/errors/gcode"
+	"github.com/gogf/gf/errors/gerror"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
+	"github.com/gogf/gf/os/gfile"
+	"github.com/gogf/gf/os/gtime"
 	"github.com/gogf/gf/util/gconv"
 	"golang.org/x/crypto/bcrypt"
 	"scnu-coding/app/dao"
@@ -50,44 +55,28 @@ func newGfToken() (gfToken gtoken.GfToken) {
 // @params r
 // @params respData
 // @date 2021-01-04 22:13:39
-//func AuthAfterFunc(r *ghttp.Request, respData gtoken.Resp) {
-// 存在令牌
-//if respData.Success() {
-//	// 鉴权
-//	Id := respData.GetString("userKey")
-//	if ok, err := authenticate(Id, r.URL.Path, r.Method); err != nil {
-//		response.Exit(r, code.OtherError)
-//	} else if !ok {
-//		// 权限不足
-//		response.Exit(r, code.PermissionError)
-//	}
-//	// 鉴权成功
-//	ctxUser := &model.ContextUser{}
-//	if err := g.Model("sys_user").InnerJoin("sys_re_user_role").
-//		InnerJoin("sys_role").Where("sys_user.user_id", Id).
-//		Where("sys_re_user_role.user_id = sys_user.user_id").Where("sys_re_user_role.user_id = sys_role.role_id").
-//		Fields(&ctxUser).Cache(1 * time.Minute).Scan(&ctxUser); err != nil {
-//		return
-//	}
-//	service.Context.Get(r.Context()).User = ctxUser
-//	r.Middleware.Next()
-//	//不存在令牌
-//} else {
-//	var params map[string]interface{}
-//	if r.Method == "GET" {
-//		params = r.GetMap()
-//	} else if r.Method == "POST" {
-//		params = r.GetMap()
-//	} else {
-//		response.Exit(r, code.OtherError)
-//		return
-//	}
-//	no := gconv.String(gtime.TimestampMilli())
-//	g.Log().Info("[AUTH_%s][url:%s][params:%s][data:%s]",
-//		no, r.URL.Path, params, respData.Json())
-//	response.Exit(r, code.AuthError)
-//}
-//}
+func AuthAfterFunc(r *ghttp.Request, respData gtoken.Resp) {
+	//存在令牌
+	if respData.Success() {
+		// 鉴权
+		id := respData.GetString("userKey")
+		if ok, err := authenticate(r.Context(), id, r.Router.Uri, r.Method); err != nil {
+			response.Exit(r, gerror.NewCode(gcode.CodeNotAuthorized))
+		} else if !ok {
+			// 权限不足
+			response.Exit(r, gerror.NewCode(gcode.CodeNotAuthorized))
+		}
+		r.Middleware.Next()
+	} else {
+		//不存在令牌
+		var params map[string]interface{}
+		params = r.GetMap()
+		no := gconv.String(gtime.TimestampMilli())
+		g.Log().Info("[AUTH_%s][url:%s][params:%s][data:%s]",
+			no, r.URL.Path, params, respData.Json())
+		response.Exit(r, gerror.NewCode(gcode.CodeNotAuthorized))
+	}
+}
 
 //// authenticate 鉴权方法
 //// @params userId
@@ -96,40 +85,42 @@ func newGfToken() (gfToken gtoken.GfToken) {
 //// @return bool
 //// @return error
 //// @date 2021-01-04 21:58:46
-//func authenticate(Id string, url string, method string) (ok bool, err error) {
-//	// 定义结构体
-//	type API struct {
-//		API    string
-//		Method string
-//	}
-//	// 创建SQL结果集
-//	apis := make([]API, 0)
-//	if err = g.Model("sys_api").InnerJoin("sys_re_api_role").InnerJoin("sys_re_user_role").
-//		InnerJoin("sys_user").InnerJoin("sys_role").Cache(5*time.Minute).
-//		Where("sys_user.user_id =", Id).And("sys_user.user_id = sys_re_user_role.user_id").
-//		Where("sys_user_role.role_id = sys_re_api_role_id.role_id").Where("sys_re_api_role.api_id = sys_api.api_id").
-//		Fields("api", "method").Scan(&apis); err != nil {
-//		return
-//	}
-//
-//	for _, v := range apis {
-//		// 用正则匹配,在该用户角色的可访问接口里有无该API
-//		if isMatch := gregex.IsMatchString(v.API, url) && v.Method == method; isMatch {
-//			return
-//		}
-//	}
-//	// 该用户角色没有权限访问该接口
-//	return
-//}
+func authenticate(ctx context.Context, id string, uri string, method string) (ok bool, err error) {
+	// 定义结构体
+	type API struct {
+		Path   string
+		Method string
+		Allow  []int
+	}
+	// 创建SQL结果集
+	apis := make([]API, 0)
+	roleId, err := dao.SysUser.Ctx(ctx).WherePri(id).Value(dao.SysUser.Columns.RoleId)
+	if err != nil {
+		return false, err
+	}
+	contents := gfile.GetContentsWithCache("/var/www/scnu-coding/config/authority.json", 0)
+	if err = gjson.DecodeTo(contents, &apis); err != nil {
+		return false, err
+	}
+	isAllow := false
+	for _, api := range apis {
+		if api.Path == uri && api.Path == method {
+			for _, i := range api.Allow {
+				if i == roleId.Int() {
+					isAllow = true
+					break
+				}
+			}
+		}
+	}
+	// 该用户角色没有权限访问该接口
+	return isAllow, nil
+}
 
 // LoginBeforeFunc 登录方法
 func LoginBeforeFunc(r *ghttp.Request) (string, interface{}) {
-	//var req *struct {
-	//	UserNum  string `valid:"required|integer#登录名不能为空|登录名需要为学号"` // 登陆凭证，目前是email
-	//	Password string `valid:"required|password#密码不能为空|密码不符合规则"`  // 密码
-	//}
 	var req *struct {
-		UserNum  string `valid:"required|integer#登录名不能为空|登录名需要为学号"` // 登陆凭证，目前是email
+		UserNum  string `valid:"required|integer#登录名不能为空|登录名需要为学号"` // 登陆凭证，目前是学号
 		Password string `valid:"required#密码不能为空"`                   // 密码
 	}
 	// 转换成结构体
@@ -138,14 +129,15 @@ func LoginBeforeFunc(r *ghttp.Request) (string, interface{}) {
 		return "", nil
 	}
 	// 在数据库查询用户是否存在(只查出密码）
-	password, err := dao.SysUser.Ctx(context.TODO()).Where(dao.SysUser.Columns.UserNum, req.UserNum).Value(dao.SysUser.Columns.Password)
+	password, err := dao.SysUser.Ctx(r.Context()).Where(dao.SysUser.Columns.UserNum, req.UserNum).
+		Value(dao.SysUser.Columns.Password)
 	if err != nil {
 		response.Exit(r, err)
 		return "", nil
 	}
 	// 不存在该用户
 	if password.IsNil() {
-		response.Exit(r, errors.New("账号或密码错误"))
+		response.Exit(r, gerror.NewCode(gcode.CodeNotAuthorized))
 		return "", nil
 	}
 	// 校验密码
@@ -154,7 +146,9 @@ func LoginBeforeFunc(r *ghttp.Request) (string, interface{}) {
 	}
 	// 获取信息
 	userInfo := &model.ContextUser{}
-	if err = dao.SysUser.Ctx(context.TODO()).Where(dao.SysUser.Columns.UserNum, req.UserNum).Scan(&userInfo); err != nil {
+	if err = dao.SysUser.Ctx(r.Context()).
+		Where(dao.SysUser.Columns.UserNum, req.UserNum).
+		Scan(&userInfo); err != nil {
 		response.Exit(r, err)
 		return "", nil
 	}

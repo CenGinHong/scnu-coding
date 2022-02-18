@@ -53,6 +53,7 @@ type ListLabSubmitResp struct {
 		LabSubmitComment string      `orm:"lab_submit_comment" json:"labSubmitComment"` // 评语
 		UpdatedAt        *gtime.Time `orm:"updated_time" json:"updatedTime"`            // 更新时间
 	} `json:"labSubmitDetail"`
+	IsIDERunning bool `json:"isIDERunning"`
 }
 
 type ListLabSubmitIdResp struct {

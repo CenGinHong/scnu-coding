@@ -106,6 +106,7 @@ func (d dockerUtil) GetContainerStat(ctx context.Context, containerID string) (c
 // @date 2021-12-21 10:57:48
 func (d *dockerUtil) ListContainer(ctx context.Context, opts types.ContainerListOptions) (containers []types.Container, err error) {
 	containers, err = d.client.ContainerList(ctx, opts)
+
 	if err != nil {
 		return nil, err
 	}

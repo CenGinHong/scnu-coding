@@ -144,3 +144,17 @@ type JoinClassReq struct {
 	CourseId  int
 	SecretKey string
 }
+
+type ListOneStudentScoreReq struct {
+	UserId   int
+	CourseId int
+}
+
+type ListOneStudentScoreResp struct {
+	LabId           int    `orm:"lab_id,primary" json:"-"` // 主键
+	Title           string `orm:"title" json:"title"`      // 标题
+	LabSubmitDetail struct {
+		LabId int `orm:"lab_id"  json:"-"`     // lab id
+		Score int `orm:"score"   json:"score"` // 分数
+	} `json:"labSubmitDetail"`
+}

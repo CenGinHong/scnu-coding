@@ -38,9 +38,6 @@ func (s *labService) ListAllLab(ctx context.Context) (resp *response.PageResp, e
 	if err = d.WithAll().Scan(&records); err != nil {
 		return nil, err
 	}
-	for _, record := range records {
-		record.AttachmentSrc = service.File.GetMinioAddr(ctx, record.AttachmentSrc)
-	}
 	// 构建筛选集
 	courseModels := make([]model.Course, 0)
 	if err = dao.Course.Ctx(ctx).Fields(dao.Course.Columns.CourseId, dao.Course.Columns.CourseName).Scan(&courseModels); err != nil {

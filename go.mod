@@ -11,6 +11,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/go-redsync/redsync/v4 v4.4.1
+	github.com/gocarina/gocsv v0.0.0-20211203214250-4735fba0c1d9 // indirect
 	github.com/goflyfox/gtoken v1.4.3
 	github.com/gogf/gcache-adapter v0.1.2
 	github.com/gogf/gf v1.16.6
@@ -28,6 +29,7 @@ require (
 	github.com/mittwald/go-helm-client v0.8.2
 	github.com/pkg/sftp v1.13.3 // indirect
 	github.com/rs/xid v1.3.0 // indirect
+	github.com/xuri/excelize/v2 v2.5.0 // indirect
 	go.opentelemetry.io/otel v1.0.0-RC3 // indirect
 	golang.org/x/crypto v0.0.0-20210915214749-c084706c2272
 	golang.org/x/net v0.0.0-20210917221730-978cfadd31cf // indirect

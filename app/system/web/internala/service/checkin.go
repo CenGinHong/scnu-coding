@@ -59,8 +59,10 @@ func (c *checkinService) ListCheckinRecordByCourseId(ctx context.Context, course
 		record.Attendance.TakeCount = totalTakeCount
 	}
 	// 实际参与签到的人
-	if err = dao.CheckinDetail.Ctx(ctx).Where(dao.CheckinDetail.Columns.CheckinRecordId, gdb.ListItemValuesUnique(records, "CheckinRecordId")).
-		Fields(dao.CheckinDetail.Columns.CheckinRecordId, "COUNT(*) as checkin_count").
+	if err = dao.CheckinDetail.Ctx(ctx).Where(g.Map{
+		dao.CheckinDetail.Columns.CheckinRecordId: gdb.ListItemValuesUnique(records, "CheckinRecordId"),
+		dao.CheckinDetail.Columns.IsCheckin:       true,
+	}).Fields(dao.CheckinDetail.Columns.CheckinRecordId, "COUNT(*) as checkin_count").
 		Group(dao.CheckinDetail.Columns.CheckinRecordId).
 		ScanList(&records, "Attendance", "checkin_record_id:CheckinRecordId"); err != nil {
 		return nil, err

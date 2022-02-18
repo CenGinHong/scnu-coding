@@ -11,14 +11,21 @@ func Init() {
 	s.BindMiddlewareDefault()
 	s.Group("/admin", func(group *ghttp.RouterGroup) {
 		group.Group("/user", func(group *ghttp.RouterGroup) {
-			group.GET("/student", api.User.GetAllStudent)
-			group.POST("/password", api.User.ResetPassword)
-			group.PATCH("/", api.User.UpdateUser)
+			group.GET("/student", api.User.ListUser)
+			group.PUT("/password/:id", api.User.ResetPassword)
+			group.PUT("/", api.User.UpdateUser)
+			group.DELETE("/:id", api.User.DeleteUser)
+			group.Group("/import", func(group *ghttp.RouterGroup) {
+				group.GET("/demo", api.User.GetImportDemoCsv)
+				group.POST("/", api.User.ImportUserIdByCsv)
+			})
+			group.GET("/:id", api.User.GetUser)
 		})
 		group.Group("/course", func(group *ghttp.RouterGroup) {
 			group.GET("/", api.Course.ListAllCourse)
 			group.Group("/enroll", func(group *ghttp.RouterGroup) {
 				group.GET("/", api.Course.ListCourseEnroll)
+				group.PUT("/", api.Course.AddStudent2Class)
 				group.DELETE("/", api.Course.RemoveCourseEnroll)
 			})
 		})

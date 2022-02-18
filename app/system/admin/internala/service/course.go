@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"github.com/gogf/gf/frame/g"
 	"scnu-coding/app/dao"
 	"scnu-coding/app/service"
 	"scnu-coding/app/system/admin/internala/define"
 	"scnu-coding/library/response"
+	"strings"
 )
 
 var Course = courseService{}
@@ -77,6 +79,30 @@ func (s *courseService) RemoveCourseEnroll(ctx context.Context, req *define.Remo
 		return err
 	}
 	return nil
+}
+
+func (s *courseService) AddStudent2Class(ctx context.Context, req *define.AddStudent2ClassReq) (errMsg string, err error) {
+	data := make([]g.Map, 0)
+	sb := &strings.Builder{}
+	for _, r := range req.StudentNum {
+		// 找到对应的id
+		userId, err := dao.SysUser.Ctx(ctx).Where(dao.SysUser.Columns.UserNum, r).Value(dao.SysUser.Columns.UserId)
+		if err != nil {
+			return "", err
+		}
+		if userId.IsNil() {
+			sb.WriteString(fmt.Sprintf("账号不存在：%s\n", r))
+		} else {
+			data = append(data, g.Map{
+				dao.ReCourseUser.Columns.CourseId: req.CourseId,
+				dao.ReCourseUser.Columns.UserId:   userId,
+			})
+		}
+	}
+	if _, err = dao.ReCourseUser.Ctx(ctx).Batch(len(data)).Data(data).InsertIgnore(); err != nil {
+		return "", err
+	}
+	return sb.String(), nil
 }
 
 //func (s *courseService) ListAllCourse(ctx context.Context) (resp *response.PageResp, err error) {

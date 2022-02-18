@@ -9,7 +9,6 @@ type Context struct {
 // ContextUser 请求上下文中的用户信息
 type ContextUser struct {
 	UserId int // 用户ID
-	//Username  string // 用户名
 	RoleId int // 用户角色
 }
 

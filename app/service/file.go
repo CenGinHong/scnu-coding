@@ -9,28 +9,23 @@ import (
 	"fmt"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
-	"github.com/gogf/gf/os/gfile"
 	"github.com/gogf/gf/os/gtime"
-	"github.com/gogf/gf/text/gstr"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"io"
 	"mime/multipart"
-	"scnu-coding/app/utils"
+	"time"
 )
 
 var File = newFileService()
 
 type fileService struct {
-	minio        *minio.Client
-	bucketName   string
-	notUsedCache *utils.MyCache
+	minio  *minio.Client
+	bucket string
 }
 
 const (
-	policyReadOnly     = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetBucketLocation\",\"s3:ListBucket\"],\"Resource\":[\"arn:aws:s3:::%s\"]},{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::%s/*\"]}]}"
-	policyWriteOnly    = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetBucketLocation\",\"s3:ListBucketMultipartUploads\"],\"Resource\":[\"arn:aws:s3:::%s\"]},{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:AbortMultipartUpload\",\"s3:DeletePic\",\"s3:ListMultipartUploadParts\",\"s3:PutObject\"],\"Resource\":[\"arn:aws:s3:::%s/*\"]}]}"
-	policyWriteAndRead = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:ListBucket\",\"s3:ListBucketMultipartUploads\",\"s3:GetBucketLocation\"],\"Resource\":[\"arn:aws:s3:::%s\"]},{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:AbortMultipartUpload\",\"s3:DeletePic\",\"s3:GetObject\",\"s3:ListMultipartUploadParts\",\"s3:PutObject\"],\"Resource\":[\"arn:aws:s3:::%s/*\"]}]}"
+	policyPublic  = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetBucketLocation\",\"s3:ListBucket\",\"s3:ListBucketMultipartUploads\"],\"Resource\":[\"arn:aws:s3:::%s\"]},{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:ListMultipartUploadParts\",\"s3:PutObject\",\"s3:AbortMultipartUpload\",\"s3:DeleteObject\",\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::%s/*\"]}]}\n"
+	policyPrivate = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
 )
 
 func newFileService() (f fileService) {
@@ -38,7 +33,7 @@ func newFileService() (f fileService) {
 	accessKeyId := g.Cfg().GetString("minio.accessKeyId")
 	secretAccessKey := g.Cfg().GetString("minio.secretAccessKey")
 	location := g.Cfg().GetString("minio.location")
-	bucketName := g.Cfg().GetString("minio.bucketName")
+	bucket := g.Cfg().GetString("minio.bucket")
 	// 初使化 minio client对象。
 	m, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyId, secretAccessKey, ""),
@@ -48,38 +43,30 @@ func newFileService() (f fileService) {
 		panic(err)
 	}
 	f = fileService{
-		minio:        m,
-		bucketName:   bucketName,
-		notUsedCache: utils.NewMyCache(),
+		minio:  m,
+		bucket: bucket,
 	}
+
 	ctx := context.Background()
 	// 创建一个存储桶
-	isExist, err := m.BucketExists(ctx, bucketName)
+	isExist, err := m.BucketExists(ctx, bucket)
 	if err != nil {
 		panic(err)
 	}
 	if !isExist {
 		if err = m.MakeBucket(
 			ctx,
-			bucketName,
+			bucket,
 			minio.MakeBucketOptions{Region: location},
 		); err != nil {
-			panic(bucketName + " 存储桶创建失败" + err.Error())
+			panic(bucket + " 存储桶创建失败" + err.Error())
 		}
 		//设置该存储桶策略
-		if err = m.SetBucketPolicy(ctx, bucketName, fmt.Sprintf(policyReadOnly, bucketName, bucketName)); err != nil {
+		if err = m.SetBucketPolicy(ctx, bucket, fmt.Sprintf(policyPublic, bucket, bucket)); err != nil {
 			panic(err)
 		}
 	}
 	return f
-}
-
-func (f *fileService) uploadToMinio(ctx context.Context, uploadName string, file io.Reader, uploadSize int64, opts minio.PutObjectOptions) (err error) {
-	// 上传
-	if _, err = f.minio.PutObject(ctx, f.bucketName, uploadName, file, uploadSize, opts); err != nil {
-		return err
-	}
-	return nil
 }
 
 // UploadFile 上传图片
@@ -99,16 +86,26 @@ func (f *fileService) UploadFile(ctx context.Context, uploadFile *ghttp.UploadFi
 		_ = file.Close()
 	}(file)
 	// 在文件名加入时间戳
-	ext := gfile.Ext(uploadFile.Filename)
-	fileName = gstr.StrTillEx(uploadFile.Filename, ext) + gtime.TimestampStr() + ext
-	contentType := uploadFile.Header.Get("Content-Type")
+	fileName = fmt.Sprintf("%s_%s", gtime.TimestampStr(), uploadFile.Filename)
+	opt := minio.PutObjectOptions{ContentType: uploadFile.Header.Get("Content-Type")}
 	size := uploadFile.Size
-	if err = f.uploadToMinio(ctx, fileName, file, size,
-		minio.PutObjectOptions{ContentType: contentType}); err != nil {
+	// 上传
+	if _, err = f.minio.PutObject(ctx, f.bucket, fileName, file, size, opt); err != nil {
 		return "", err
 	}
 	// 返回fileName
 	return fileName, nil
+}
+
+func (f *fileService) UploadFileAndGetUrl(ctx context.Context, uploadFile *ghttp.UploadFile) (url string, err error) {
+	// 打开文件
+	file, err := f.UploadFile(ctx, uploadFile)
+	if err != nil {
+		return "", err
+	}
+	url = fmt.Sprintf("%s/%s", f.minio.EndpointURL().Host, file)
+	// 返回fileName
+	return url, nil
 }
 
 // RemoveObject 根据url删除文件
@@ -119,7 +116,7 @@ func (f *fileService) UploadFile(ctx context.Context, uploadFile *ghttp.UploadFi
 func (f *fileService) RemoveObject(ctx context.Context, fileName string) error {
 	if err := f.minio.RemoveObject(
 		ctx,
-		f.bucketName,
+		f.bucket,
 		fileName,
 		minio.RemoveObjectOptions{}); err != nil {
 		return err
@@ -127,11 +124,25 @@ func (f *fileService) RemoveObject(ctx context.Context, fileName string) error {
 	return nil
 }
 
-func (f *fileService) GetMinioAddr(_ context.Context, oriAddr string) (addr string) {
-	if oriAddr == "" {
+func (f *fileService) GetObjectPresignedUrl(ctx context.Context, objectName string, expires time.Duration) (string, error) {
+	url, err := f.minio.PresignedGetObject(ctx, f.bucket, objectName, expires, nil)
+	if err != nil {
+		return "", nil
+	}
+	return url.String(), err
+}
+
+func (f fileService) GetObjectUrl(_ context.Context, objectName string) string {
+	if objectName == "" {
 		return ""
 	}
-	addr = g.Cfg().GetString("minio.protocol") + "://" + g.Cfg().GetString("minio.endpoint") + "/" +
-		f.bucketName + "/" + oriAddr
-	return addr
+	return fmt.Sprintf("%s/%s/%s", f.minio.EndpointURL(), f.bucket, objectName)
+}
+
+func (f fileService) Get() {
+	acl, err := f.minio.GetBucketPolicy(context.Background(), f.bucket)
+	if err != nil {
+		return
+	}
+	fmt.Println(acl)
 }

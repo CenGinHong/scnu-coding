@@ -48,10 +48,6 @@ func (c *courseService) ListCourseByTeacherId(ctx context.Context) (resp *respon
 	if err = d.OrderDesc(dao.Course.Columns.CreatedAt).Scan(&records); err != nil {
 		return nil, err
 	}
-	// 拼接地址
-	for _, record := range records {
-		record.CoverImg = service.File.GetMinioAddr(ctx, record.CoverImg)
-	}
 	// 分页信息整合
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil
@@ -86,11 +82,6 @@ func (c *courseService) ListCourseEnroll(ctx context.Context) (resp *response.Pa
 	if err = dao.Course.Ctx(ctx).WherePri(courseIds).WithAll().Scan(&records); err != nil {
 		return nil, err
 	}
-	// 拼接地址
-	for _, record := range records {
-		record.CoverImg = service.File.GetMinioAddr(ctx, record.CoverImg)
-
-	}
 	// 分页信息整合
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil
@@ -103,9 +94,12 @@ func (c *courseService) ListCourseEnroll(ctx context.Context) (resp *response.Pa
 // @return err
 // @date 2021-05-03 15:52:49
 func (c *courseService) UpdateCourse(ctx context.Context, req *define.UpdateCourseReq) (err error) {
-	//ctxUser := service.Context.Get(ctx).User
 	// 保存
-	if _, err = dao.Course.Ctx(ctx).WherePri(req.CourseId).OmitNilData().Data(req).Update(req); err != nil {
+	if _, err = dao.Course.Ctx(ctx).
+		WherePri(req.CourseId).
+		OmitNilData().
+		Data(req).
+		Update(req); err != nil {
 		return err
 	}
 	return nil
@@ -130,7 +124,6 @@ func (c *courseService) ListCourseByCourseName(ctx context.Context, courseName s
 	ctxPageInfo := service.Context.Get(ctx).PageInfo
 	ctxUserInfo := service.Context.Get(ctx).User
 	d := dao.Course.Ctx(ctx).Page(ctxPageInfo.Current, ctxPageInfo.PageSize)
-	d = d.Where(dao.Course.Columns.IsClose, false)
 	if courseName != "" {
 		d = d.WhereLike(dao.Course.Columns.CourseName, "%"+courseName+"%")
 	}
@@ -143,34 +136,19 @@ func (c *courseService) ListCourseByCourseName(ctx context.Context, courseName s
 		return nil, err
 	}
 	// 找一下有没加入课程
-	if err = dao.ReCourseUser.Ctx(ctx).Where(dao.ReCourseUser.ReCourseUserDao.Columns.CourseId, gdb.ListItemValuesUnique(records, "CourseId")).
-		Where(dao.ReCourseUser.Columns.UserId, ctxUserInfo.UserId).
+	if err = dao.ReCourseUser.Ctx(ctx).
+		Where(g.Map{
+			dao.ReCourseUser.ReCourseUserDao.Columns.CourseId: gdb.ListItemValuesUnique(records, "CourseId"),
+			dao.ReCourseUser.Columns.UserId:                   ctxUserInfo.UserId}).
 		Fields("course_id,COUNT(*) as is_take").
 		Group("course_id").
 		ScanList(&records, "IsTakeDetail", "course_id:CourseId"); err != nil {
 		return nil, err
 	}
-	// 拼接地址
-	for _, record := range records {
-		record.CoverImg = service.File.GetMinioAddr(ctx, record.CoverImg)
-	}
 	// 分页信息整合
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil
 }
-
-//
-//func (c *courseService) Delete(ctx context.Context, courseId int) (err error) {
-//	ctxUser := service.Context.Get(ctx).User
-//	// 删除课程信息
-//	if _, err = dao.Course.Where(g.Map{
-//		dao.Course.Columns.UserId:   ctxUser.UserId,
-//		dao.Course.Columns.CourseId: courseId,
-//	}).Delete(); err != nil {
-//		return err
-//	}
-//	return nil
-//}
 
 // ExportCsvTemplate 导出模板
 // @receiver receiver
@@ -183,11 +161,7 @@ func (c *courseService) ExportCsvTemplate() (file *bytes.Buffer, err error) {
 	utils.WriteBom(file)
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-	headLine := make([]string, 0)
-	headLine = append(headLine, "学号")
-	headLine = append(headLine, "姓名")
-	headLine = append(headLine, "班级")
-	headLine = append(headLine, "专业")
+	headLine := []string{"学号", "姓名", "班级", "专业"}
 	if err = writer.Write(headLine); err != nil {
 		return nil, err
 	}
@@ -210,9 +184,6 @@ func (c *courseService) ListCourseStudentOverview(ctx context.Context, courseId 
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, err
-	}
 	records := make([]*define.CourseStudentOverviewResp, 0)
 	if err = d.With(define.CourseStudentOverviewResp{}.UserDetail).Scan(&records); err != nil {
 		return nil, err
@@ -222,11 +193,17 @@ func (c *courseService) ListCourseStudentOverview(ctx context.Context, courseId 
 		return nil, err
 	}
 	// 查平均成绩
-	if err = dao.LabSubmit.Ctx(ctx).Where(dao.LabSubmit.Columns.LabId, labIds).
-		Where(dao.LabSubmit.Columns.UserId, gdb.ListItemValuesUnique(records, "UserId")).
-		Fields(dao.LabSubmit.Columns.UserId, "AVG(score) as score").Group(dao.LabSubmit.Columns.UserId).
+	if err = dao.LabSubmit.Ctx(ctx).
+		Where(g.Map{
+			dao.LabSubmit.Columns.LabId:  labIds,
+			dao.LabSubmit.Columns.UserId: gdb.ListItemValuesUnique(records, "UserId")}).
+		Fields(dao.LabSubmit.Columns.UserId, "SUM(score) as score").
+		Group(dao.LabSubmit.Columns.UserId).
 		ScanList(&records, "AvgScoreDetail", "user_id:UserId"); err != nil {
 		return nil, err
+	}
+	for _, r := range records {
+		r.AvgScoreDetail.Score = r.AvgScoreDetail.Score / float32(len(labIds))
 	}
 	// 签到总数
 	checkinRecordId, err := dao.CheckinRecord.Ctx(ctx).Where(dao.CheckinRecord.Columns.CourseId, courseId).Array(dao.CheckinRecord.Columns.CheckinRecordId)
@@ -258,11 +235,11 @@ func (c *courseService) ListCourseStudentOverview(ctx context.Context, courseId 
 	return resp, nil
 }
 
-func (c *courseService) ListOneStudentScore(ctx context.Context, courseId int, userId int) (resp *response.PageResp, err error) {
-	records := make([]*define.ListOneStudentScore, 0)
+func (c *courseService) ListOneStudentScore(ctx context.Context, req *define.ListOneStudentScoreReq) (resp *response.PageResp, err error) {
+	records := make([]*define.ListOneStudentScoreResp, 0)
 	ctxPageInfo := service.Context.Get(ctx).PageInfo
 	d := dao.Lab.Ctx(ctx).Page(ctxPageInfo.Current, ctxPageInfo.PageSize)
-	d = d.Where(dao.Lab.Columns.CourseId, courseId)
+	d = d.Where(dao.Lab.Columns.CourseId, req.CourseId)
 	total, err := d.Count()
 	if err != nil {
 		return nil, err
@@ -270,10 +247,11 @@ func (c *courseService) ListOneStudentScore(ctx context.Context, courseId int, u
 	if err = d.Scan(&records); err != nil {
 		return nil, err
 	}
-	if err = dao.LabSubmit.Ctx(ctx).Where(dao.LabSubmit.Columns.UserId, userId).
-		Where(dao.LabSubmit.Columns.LabId, gdb.ListItemValuesUnique(records, "LabId")).
-		Fields(define.ListOneStudentScore{}.LabSubmitDetail).
-		Scan(&records, "LabSubmitDetail", "lab_id:LabId"); err != nil {
+	if err = dao.LabSubmit.Ctx(ctx).Where(g.Map{
+		dao.LabSubmit.Columns.UserId: req.UserId,
+		dao.LabSubmit.Columns.LabId:  gdb.ListItemValuesUnique(records, "LabId")}).
+		Fields(define.ListOneStudentScoreResp{}.LabSubmitDetail).
+		ScanList(&records, "LabSubmitDetail", "lab_id:LabId"); err != nil {
 		return nil, err
 	}
 	resp = response.GetPageResp(records, total, nil)
@@ -329,7 +307,9 @@ func (c courseService) ImportStudent2Class(ctx context.Context, req *define.Impo
 
 func (c *courseService) IsOpenByTeacherId(ctx context.Context, courseId int) (isOpen bool, err error) {
 	ctxUser := service.Context.Get(ctx).User
-	count, err := dao.Course.Ctx(ctx).WherePri(courseId).Where(dao.Course.Columns.UserId, ctxUser.UserId).Count()
+	count, err := dao.Course.Ctx(ctx).
+		WherePri(courseId).Where(dao.Course.Columns.UserId, ctxUser.UserId).
+		Count()
 	if err != nil {
 		return false, err
 	}
@@ -354,7 +334,9 @@ func (c courseService) JoinClass(ctx context.Context, req *define.JoinClassReq) 
 		req.UserId = ctxUser.UserId
 	}
 	// 比对课程密钥
-	secretKey, err := dao.Course.Ctx(ctx).Where(req.CourseId).Value(dao.Course.Columns.SecretKey)
+	secretKey, err := dao.Course.Ctx(ctx).
+		Where(req.CourseId).
+		Value(dao.Course.Columns.SecretKey)
 	if err != nil {
 		return err
 	}
@@ -369,8 +351,4 @@ func (c courseService) JoinClass(ctx context.Context, req *define.JoinClassReq) 
 		return err
 	}
 	return nil
-}
-
-func (c *courseService) RemoveStudentFromClass() {
-
 }

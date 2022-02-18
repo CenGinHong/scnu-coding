@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/gogf/gf/os/gcache"
 	"github.com/gogf/gf/os/gtime"
 	helmclient "github.com/mittwald/go-helm-client"
 	"helm.sh/helm/v3/pkg/repo"
@@ -121,7 +120,6 @@ func TestDocker(t *testing.T) {
 	}
 
 	containers, err := utils.DockerUtil.ListContainer(context.Background(), types.ContainerListOptions{
-		//Filters:fil,
 		All:     false,
 		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: "ide-2-8"}),
 	})
@@ -134,13 +132,5 @@ func TestDocker(t *testing.T) {
 }
 
 func TestIDE(t *testing.T) {
-	cache := gcache.New()
-	set, err := cache.GetOrSet("1", "2", 0)
-	if err != nil {
-		return
-	}
-	if err != nil {
-		return
-	}
-	fmt.Println(set)
+	utils.DockerUtil.T()
 }

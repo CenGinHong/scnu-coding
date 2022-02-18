@@ -17,15 +17,17 @@ import (
 // @return transformedReader
 // @date 2021-05-03 00:00:39
 func RemoveBom(r io.Reader) (transformedReader io.Reader, err error) {
-	// 去掉bom
-	transformedReader = utfbom.SkipOnly(r)
-	// 转utf8
-	if all, err := io.ReadAll(transformedReader); err != nil {
+	//去掉bom
+	transformedReader, e := utfbom.Skip(r)
+	println(e)
+	//转utf8
+	if all, err := io.ReadAll(r); err != nil {
 		return nil, err
 	} else if !utf8.Valid(all) {
-		transformedReader = simplifiedchinese.GB18030.NewDecoder().Reader(transformedReader)
+		transformedReader = simplifiedchinese.GB18030.NewDecoder().Reader(r)
 	}
 	return transformedReader, nil
+	//ioutil.ReadAll(transform.NewReader(bytes.NewBuffer(data), simplifiedchinese.GBK.NewDecoder()))
 }
 
 // WriteBom 写入bom头

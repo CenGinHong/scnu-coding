@@ -58,12 +58,14 @@ func (c *courseAnnouncementService) ListCourseAnnouncement(ctx context.Context, 
 		return nil, err
 	}
 	records := make([]*define.CourseAnnouncementResp, 0)
-	if err = d.Page(ctxPageInfo.Current, ctxPageInfo.PageSize).OrderDesc(dao.CourseAnnouncement.Columns.CreatedAt).WithAll().Scan(&records); err != nil {
+	if err = d.Page(ctxPageInfo.Current, ctxPageInfo.PageSize).
+		OrderDesc(dao.CourseAnnouncement.Columns.CreatedAt).
+		WithAll().
+		Scan(&records); err != nil {
 		return nil, err
 	}
-	// 拼接地址
-	for _, record := range records {
-		record.AttachmentSrc = service.File.GetMinioAddr(ctx, record.AttachmentSrc)
+	for _, r := range records {
+		r.AttachmentSrc = service.File.GetObjectUrl(ctx, r.AttachmentSrc)
 	}
 	resp = response.GetPageResp(records, total, nil)
 	return resp, nil
@@ -86,6 +88,7 @@ func (c *courseAnnouncementService) GetOne(ctx context.Context, courseAnnounceme
 	if err = dao.CourseAnnouncement.Ctx(ctx).WherePri(courseAnnouncementId).Scan(&resp); err != nil {
 		return nil, err
 	}
+	resp.AttachmentSrc = service.File.GetObjectUrl(ctx, resp.AttachmentSrc)
 	return resp, nil
 }
 

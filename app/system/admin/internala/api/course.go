@@ -42,3 +42,17 @@ func (a *courseApi) RemoveCourseEnroll(r *ghttp.Request) {
 	}
 	response.Succ(r)
 }
+
+func (a *courseApi) AddStudent2Class(r *ghttp.Request) {
+	var req *define.AddStudent2ClassReq
+	if err := r.Parse(&req); err != nil {
+		response.Exit(r, err)
+		return
+	}
+	errMsg, err := service.Course.AddStudent2Class(r.Context(), req)
+	if err != nil {
+		response.Exit(r, err)
+		return
+	}
+	response.Succ(r, errMsg)
+}

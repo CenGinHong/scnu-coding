@@ -5,16 +5,17 @@
 package define
 
 import (
+	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/os/gtime"
 	"github.com/gogf/gf/util/gmeta"
 )
 
 type InsertLabReq struct {
-	CourseId      int         // 该实验隶属的课程
-	Title         string      // 标题
-	Content       string      // 实验内容简介
-	AttachmentSrc string      // 实验附件url
-	DeadLine      *gtime.Time // 截止时间
+	CourseId   int               // 该实验隶属的课程
+	Title      string            // 标题
+	Content    string            // 实验内容简介
+	UploadFile *ghttp.UploadFile // 实验附件
+	DeadLine   *gtime.Time       // 截止时间
 }
 
 type LabDetailResp struct {
@@ -45,20 +46,12 @@ type LabDetailResp struct {
 }
 
 type UpdateLabReq struct {
-	LabId         int     `orm:"lab_id,primary"` // 主键
-	Title         string  `orm:"title"`          // 标题
-	Content       string  `orm:"content"`        // 实验内容描述
-	AttachmentSrc *string `orm:"attachment_src"` // 实验附件url
-	Deadline      string  `orm:"deadline"`       // 截止时间
-}
-
-type ListOneStudentScore struct {
-	LabId           int    `orm:"lab_id,primary" json:"-"` // 主键
-	Title           string `orm:"title" json:"title"`      // 标题
-	LabSubmitDetail struct {
-		LabId int `orm:"lab_id"  json:"-"`     // lab id
-		Score int `orm:"score"   json:"score"` // 分数
-	} `json:"labSubmitDetail"`
+	LabId        int               `orm:"lab_id,primary"` // 主键
+	Title        string            `orm:"title"`          // 标题
+	UploadFile   *ghttp.UploadFile // 实验附件
+	IsRemoveFile bool              // 是否把文件移除了
+	Content      string            `orm:"content"`  // 实验内容描述
+	Deadline     *gtime.Time       `orm:"deadline"` // 截止时间
 }
 
 //type demo struct {

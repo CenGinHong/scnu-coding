@@ -37,3 +37,8 @@ type RemoveCourseEnrollReq struct {
 	UserId   int
 	CourseId int
 }
+
+type AddStudent2ClassReq struct {
+	CourseId   int
+	StudentNum []string
+}

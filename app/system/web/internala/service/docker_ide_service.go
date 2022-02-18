@@ -25,7 +25,7 @@ type dockerIDEService struct{}
 func newDockerIDEService() (s *dockerIDEService) {
 	s = new(dockerIDEService)
 	// 拉镜像
-	s.pullIDEImage()
+	//s.pullIDEImage()
 	return s
 }
 
@@ -89,7 +89,7 @@ func (d *dockerIDEService) OpenIDE(ctx context.Context, req *define.OpenIDEReq) 
 		}
 	}
 	host := g.Cfg().GetString("ide.deployment.docker.host")
-	url = fmt.Sprintf("%s%s:%d", "http://", host, port)
+	url = fmt.Sprintf("%s://%s:%d", "http", host, port)
 	return url, nil
 }
 
@@ -120,7 +120,9 @@ func (d dockerIDEService) StartIDE(ctx context.Context, req *define.OpenIDEReq) 
 	if err != nil {
 		return 0, err
 	}
-	list, err := utils.DockerUtil.ListContainer(ctx, types.ContainerListOptions{Filters: filters.NewArgs(filters.KeyValuePair{Key: "id", Value: container.ID})})
+	list, err := utils.DockerUtil.ListContainer(ctx, types.ContainerListOptions{
+		Filters: filters.NewArgs(filters.KeyValuePair{Key: "id", Value: container.ID}),
+	})
 	if err != nil {
 		return 0, err
 	}
