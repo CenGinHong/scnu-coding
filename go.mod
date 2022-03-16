@@ -25,7 +25,6 @@ require (
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.14
 	github.com/minio/sha256-simd v1.0.0 // indirect
-	github.com/mittwald/go-helm-client v0.8.2
 	github.com/pkg/sftp v1.13.3 // indirect
 	github.com/rs/xid v1.3.0 // indirect
 	github.com/xuri/excelize/v2 v2.5.0
@@ -37,7 +36,6 @@ require (
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.63.2 // indirect
-	helm.sh/helm/v3 v3.7.0
 )
 
 go 1.11
