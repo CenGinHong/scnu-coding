@@ -1,7 +1,7 @@
 package api
 
 import (
-	"fmt"
+	"github.com/gogf/gf/encoding/gurl"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
 	"scnu-coding/app/system/web/internala/define"
@@ -101,13 +101,10 @@ func (l *labSummitAPI) ExportScore(r *ghttp.Request) {
 		response.Exit(r, err)
 		return
 	}
-	r.Response.Header().Set("Pragma", "No-cache")
-	r.Response.Header().Set("Cache-Control", "No-cache")
-	r.Response.Header().Set("Expires", "0")
-	r.Response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", "成绩表表"))
-	r.Response.Header().Set("Content-Type", "text/csv")
-	r.Response.Write(file)
-	r.Response.Flush()
+	r.Response.Header().Add("Access-Control-Expose-Headers", "Content-Disposition")
+	r.Response.Header().Add("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf8")
+	r.Response.Header().Add("Content-Disposition", "attachment;filename="+gurl.Encode("成绩.xlsx"))
+	r.Response.WriteExit(file)
 }
 
 //func (l *labSummitAPI) InsertCodeFinish(r *ghttp.Request) {
@@ -154,14 +151,14 @@ func (l *labSummitAPI) GetCode(r *ghttp.Request) {
 	response.Succ(r, resp)
 }
 
-//func (receiver *labSummitAPI) PlagiarismCheck(r *ghttp.Request) {
-//	labId := r.GetInt("labId")
-//	resp, err := service.LabSummit.PlagiarismCheck(labId)
-//	if err != nil {
-//		response.Exit(r, err)
-//	}
-//	response.Succ(r, resp)
-//}
+func (l *labSummitAPI) PlagiarismCheck(r *ghttp.Request) {
+	labId := r.GetInt("labId")
+	resp, err := service.LabSummit.ExecPlagiarismCheckByMoss(r.Context(), labId)
+	if err != nil {
+		response.Exit(r, err)
+	}
+	response.Succ(r, resp)
+}
 
 //func (receiver *labSummitAPI) GetReportUrl(r *ghttp.Request) {
 //	var req *model.GetReportUrlReq

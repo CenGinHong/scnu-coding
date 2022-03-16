@@ -5,9 +5,7 @@ package service
 // @Description:
 
 import (
-	"bytes"
 	"context"
-	"encoding/csv"
 	"fmt"
 	"github.com/gogf/gf/database/gdb"
 	"github.com/gogf/gf/errors/gcode"
@@ -16,7 +14,6 @@ import (
 	"scnu-coding/app/dao"
 	"scnu-coding/app/service"
 	"scnu-coding/app/system/web/internala/define"
-	"scnu-coding/app/utils"
 	"scnu-coding/library/response"
 )
 
@@ -155,18 +152,18 @@ func (c *courseService) ListCourseByCourseName(ctx context.Context, courseName s
 // @return file
 // @return err
 // @date 2021-05-03 23:59:58
-func (c *courseService) ExportCsvTemplate() (file *bytes.Buffer, err error) {
-	// 新建csv
-	file = &bytes.Buffer{}
-	utils.WriteBom(file)
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-	headLine := []string{"学号", "姓名", "班级", "专业"}
-	if err = writer.Write(headLine); err != nil {
-		return nil, err
-	}
-	return file, nil
-}
+//func (c *courseService) ExportCsvTemplate() (file *bytes.Buffer, err error) {
+//	// 新建csv
+//	file = &bytes.Buffer{}
+//	utils.WriteBom(file)
+//	writer := csv.NewWriter(file)
+//	defer writer.Flush()
+//	headLine := []string{"学号", "姓名", "班级", "专业"}
+//	if err = writer.Write(headLine); err != nil {
+//		return nil, err
+//	}
+//	return file, nil
+//}
 
 func (c *courseService) GetCourseDetail(ctx context.Context, courseId int) (resp *define.CourseDetailResp, err error) {
 	resp = &define.CourseDetailResp{}

@@ -1,6 +1,7 @@
 package define
 
 import (
+	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/os/gtime"
 )
 
@@ -15,15 +16,18 @@ type CourseAnnouncementResp struct {
 }
 
 type InsertCourseAnnouncementReq struct {
-	CourseId      int    // 课程id
-	Title         string // 标题，限20字
-	Content       string // 公告内容，无字数限制
-	AttachmentSrc string // 文件url
+	CourseId      int               // 课程id
+	Title         string            // 标题，限20字
+	Content       string            // 公告内容，无字数限制
+	UploadFile    *ghttp.UploadFile // 附件
+	AttachmentSrc string
 }
 
 type UpdateCourseAnnouncementReq struct {
-	CourseAnnouncementId int     // 课程id
-	Title                *string // 标题，限20字
-	Content              *string // 公告内容，无字数限制
-	AttachmentSrc        *string // 文件url
+	CourseAnnouncementId int               // 课程id
+	Title                *string           // 标题，限20字
+	Content              *string           // 公告内容，无字数限制
+	IsRemoveFile         bool              // 是否把文件移除了
+	UploadFile           *ghttp.UploadFile // 附件
+	AttachmentSrc        string
 }

@@ -37,7 +37,7 @@ func newGfToken() (gfToken gtoken.GfToken) {
 		"/web/ide/connect",
 	}
 	gfToken = gtoken.GfToken{
-		CacheMode:        2,
+		CacheMode:        1,
 		LoginPath:        "/login",
 		LogoutPath:       "/logout",
 		LoginBeforeFunc:  LoginBeforeFunc,

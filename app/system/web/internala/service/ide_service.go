@@ -37,7 +37,7 @@ func newIDEService() iDEService {
 	i.ide = newIDE()
 	i.ideAliveCache = *utils.NewMyCache()
 	i.lock = utils.NewMyMutex()
-	//i.removeAllIDE()
+	i.removeAllIDE()
 	return i
 }
 

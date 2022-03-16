@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/gogf/gf/frame/g"
+	"github.com/gogf/gf/os/gfile"
 	"github.com/gogf/gf/os/gtime"
-	helmclient "github.com/mittwald/go-helm-client"
-	"helm.sh/helm/v3/pkg/repo"
-	"io/ioutil"
 	"scnu-coding/app/dao"
 	"scnu-coding/app/model"
 	"scnu-coding/app/utils"
@@ -59,43 +58,26 @@ func TestGetAllUser(t *testing.T) {
 }
 
 func TestK8s(t *testing.T) {
-	k, err := ioutil.ReadFile("D:\\project\\scnu-coding\\config\\k3s.yaml")
+	client, err := utils.NewMossClient("java", g.Cfg().GetString("moss.userId"))
 	if err != nil {
-		panic(err)
+		return
 	}
-	cl, err := helmclient.NewClientFromKubeConf(&helmclient.KubeConfClientOptions{
-		Options:     &helmclient.Options{Debug: true, Namespace: "test"},
-		KubeContext: "kind",
-		KubeConfig:  k,
-	})
+	if err = client.Run(); err != nil {
+		return
+	}
+	strings, err := gfile.ScanDir("D:\\project\\新建文件夹", "*.java", true)
 	if err != nil {
-		print(err)
+		return
 	}
-	chartRepo := repo.Entry{
-		Name: "stable",
-		URL:  "https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts",
+	for _, s := range strings {
+		err := client.UploadFile(s, false)
+		if err != nil {
+			return
+		}
 	}
-
-	// Add a chart-repository to the client
-	if err := cl.AddOrUpdateChartRepo(chartRepo); err != nil {
-		panic(err)
-	}
-	chart, err := cl.InstallOrUpgradeChart(context.Background(), &helmclient.ChartSpec{
-		ReleaseName: "mysql",
-		ChartName:   "stable/mysql",
-		Namespace:   "default",
-		UpgradeCRDs: true,
-		Wait:        true,
-	})
-	if err != nil {
-		print(err)
-	}
-	print(chart)
-	//releases, err := cl.ListDeployedReleases()
-	//if err != nil {
-	//	print(err)
-	//}
-	//fmt.Print(releases[0].Namespace)
+	client.SendQuery()
+	println(client.ResultURL.String())
+	client.Close()
 }
 
 func TestDocker(t *testing.T) {

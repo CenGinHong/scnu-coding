@@ -26,32 +26,26 @@ type labService struct{}
 // @return err
 // @date 2021-05-05 00:14:12
 func (l *labService) InsertLab(ctx context.Context, req *define.InsertLabReq) (err error) {
-	if err = g.DB().Transaction(ctx, func(ctx context.Context, tx *gdb.TX) error {
-		// 插入新数据
-		labId, err := dao.Lab.Ctx(ctx).TX(tx).
-			Data(req).
-			InsertAndGetId()
+	// 如果文件就插入文件
+	if req.UploadFile != nil {
+		req.AttachmentSrc, err = service.File.UploadFile(ctx, req.UploadFile)
 		if err != nil {
 			return err
 		}
-		// 如果文件就插入文件
-		if req.UploadFile != nil {
-			filename, err := service.File.UploadFile(ctx, req.UploadFile)
+		defer func() {
 			if err != nil {
-				return err
+				_ = service.File.RemoveObject(ctx, req.AttachmentSrc)
 			}
-			if _, err = dao.Lab.Ctx(ctx).TX(tx).
-				WherePri(labId).
-				Data(g.Map{dao.Lab.Columns.AttachmentSrc: filename}).
-				Update(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
+		}()
+	}
+	// 插入新数据
+	if _, err = dao.Lab.Ctx(ctx).
+		Data(req).
+		Insert(); err != nil {
 		return err
 	}
 	return nil
+
 }
 
 // ListLabByCourseId 课程详情页查询分页列表实验
@@ -115,14 +109,7 @@ func (l *labService) Update(ctx context.Context, req *define.UpdateLabReq) (err 
 			}
 		}
 		if req.UploadFile != nil {
-			filename, err := service.File.UploadFile(ctx, req.UploadFile)
-			if err != nil {
-				return err
-			}
-			if _, err = dao.Lab.Ctx(ctx).TX(tx).
-				WherePri(req.LabId).
-				Data(g.Map{dao.Lab.Columns.AttachmentSrc: filename}).
-				Update(); err != nil {
+			if req.AttachmentSrc, err = service.File.UploadFile(ctx, req.UploadFile); err != nil {
 				return err
 			}
 		}

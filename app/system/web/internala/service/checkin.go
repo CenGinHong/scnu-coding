@@ -7,12 +7,15 @@ package service
 import (
 	"bytes"
 	"context"
-	"encoding/csv"
+	"fmt"
 	"github.com/gogf/gf/database/gdb"
 	"github.com/gogf/gf/errors/gcode"
 	"github.com/gogf/gf/errors/gerror"
 	"github.com/gogf/gf/frame/g"
+	"github.com/gogf/gf/os/glog"
+	"github.com/xuri/excelize/v2"
 	"scnu-coding/app/dao"
+	"scnu-coding/app/model"
 	"scnu-coding/app/service"
 	"scnu-coding/app/system/web/internala/define"
 	"scnu-coding/app/utils"
@@ -151,9 +154,12 @@ func (c *checkinService) StuListCheckinRecords(ctx context.Context, courseId int
 	}
 	// 绑定详细信息
 	if err = dao.CheckinDetail.Ctx(ctx).
-		Where(dao.CheckinDetail.Columns.CheckinRecordId, gdb.ListItemValuesUnique(records, "CheckinRecordId")).
-		Where(dao.CheckinDetail.Columns.UserId, ctxUser.UserId).Fields(define.StuListCheckInRecordResp{}.CheckinDetail).
-		ScanList(records, "CheckInDetail", "checkin_record_id:CheckinRecordId"); err != nil {
+		Where(g.Map{
+			dao.CheckinDetail.Columns.CheckinRecordId: gdb.ListItemValues(records, "CheckinRecordId"),
+			dao.CheckinDetail.Columns.UserId:          ctxUser.UserId,
+		}).
+		Fields(define.StuListCheckInRecordResp{}.CheckinDetail).
+		ScanList(&records, "CheckInDetail", "checkin_record_id:CheckinRecordId"); err != nil {
 		return nil, err
 	}
 	// 分页信息整合
@@ -254,56 +260,88 @@ func (c *checkinService) DeleteCheckinRecord(ctx context.Context, id int) (err e
 	return nil
 }
 
-func (c *checkinService) ExportCheckinCsv(ctx context.Context, courseId int) (file *bytes.Buffer, err error) {
-	userRecords := make([]*define.EnrollUserDetail, 0)
+func (c *checkinService) ExportCheckinToExcel(ctx context.Context, courseId int) (buffer *bytes.Buffer, err error) {
+	exportCheckinRecords := make([]*define.ExportCheckinRecord, 0)
 	// 查出全部选课学生
-	if err = dao.ReCourseUser.Ctx(ctx).Where(dao.ReCourseUser.Columns.CourseId, courseId).WithAll().
-		Scan(&userRecords); err != nil {
+	if err = dao.ReCourseUser.Ctx(ctx).Where(dao.ReCourseUser.Columns.CourseId, courseId).
+		WithAll().
+		Scan(&exportCheckinRecords); err != nil {
 		return nil, err
 	}
-	checkinRecords := make([]*define.ExportCheckinRecord, 0)
-	if err = dao.CheckinRecord.Ctx(ctx).Where(dao.CheckinRecord.Columns.CourseId, courseId).WithAll().
+	// 查出该课程的签到记录id
+	checkinRecords := make([]*model.CheckinRecord, 0)
+	if err = dao.CheckinRecord.Ctx(ctx).Where(dao.CheckinRecord.Columns.CourseId, courseId).
+		Fields(dao.CheckinRecord.Columns.CheckinName, dao.CheckinRecord.Columns.CheckinRecordId).
+		OrderAsc(dao.CheckinRecord.Columns.CheckinRecordId).
 		Scan(&checkinRecords); err != nil {
 		return nil, err
 	}
-	// 新建csv
-	file = &bytes.Buffer{}
-	utils.WriteBom(file)
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-	headLine := []string{"姓名", "学号"}
-	// 写入表头
-	for _, record := range checkinRecords {
-		headLine = append(headLine, record.CheckinName)
-	}
-	if err = writer.Write(headLine); err != nil {
+	// 查出签到详情
+	if err = dao.CheckinDetail.Ctx(ctx).
+		Where(g.Map{
+			dao.CheckinDetail.Columns.CheckinRecordId: gdb.ListItemValues(checkinRecords, "CheckinRecordId"),
+			dao.CheckinDetail.Columns.UserId:          gdb.ListItemValues(exportCheckinRecords, "UserId"),
+		}).OrderAsc(dao.CheckinDetail.Columns.CheckinRecordId).
+		ScanList(&exportCheckinRecords, "CheckinDetails", "user_id:UserId"); err != nil {
 		return nil, err
 	}
-	data := make([][]string, 0)
-	// 数据量也不大就直接三层for了
-	for _, record := range userRecords {
-		row := make([]string, 0)
-		row = append(row, record.UserDetail.Username)
-		row = append(row, record.UserDetail.UserNum)
+	f := excelize.NewFile()
+	f.SetSheetName("Sheet1", "签到")
+	defer func(f *excelize.File) {
+		if err = f.Close(); err != nil {
+			glog.Error(err)
+		}
+	}(f)
+	header := []string{"姓名", "学号"}
+	for _, r := range checkinRecords {
+		header = append(header, r.CheckinName)
+	}
+	header = append(header, "出勤率")
+	if err = f.SetSheetRow("签到", "A1", &header); err != nil {
+		return nil, err
+	}
+	for i, exportCheckinRecord := range exportCheckinRecords {
+		row := make([]interface{}, 0)
+		row = append(row, exportCheckinRecord.UserDetail.Username)
+		row = append(row, exportCheckinRecord.UserDetail.UserNum)
+		checkInIdx := 0
+		// 计算出勤率
+		count := 0
+		if exportCheckinRecord.CheckinDetails == nil {
+			// 自定义记录
+			exportCheckinRecord.CheckinDetails = make([]*struct {
+				CheckinRecordId int  // 签到记录id
+				UserId          int  // 参与签到的人
+				IsCheckin       bool // 是否签到
+			}, 0)
+		}
 		for _, checkinRecord := range checkinRecords {
-			isCheckin := false
-			count := 0
-			for _, checkinDetail := range checkinRecord.CheckinDetails {
-				if checkinDetail.UserId == record.UserId && checkinDetail.IsCheckin {
-					count++
-					isCheckin = true
+			if checkInIdx < len(exportCheckinRecord.CheckinDetails) &&
+				exportCheckinRecord.CheckinDetails[checkInIdx].CheckinRecordId == checkinRecord.CheckinRecordId {
+				// 加入记录
+				if exportCheckinRecord.CheckinDetails[checkInIdx].IsCheckin {
 					row = append(row, "√")
-					break
+					count++
+				} else {
+					row = append(row, "×")
 				}
-			}
-			if !isCheckin {
-				row = append(row, " ")
+			} else {
+				row = append(row, "×")
 			}
 		}
-		data = append(data, row)
+		if len(checkinRecords) == 0 {
+			row = append(row, 0)
+		} else {
+			row = append(row, float32(count)/float32(len(checkinRecords)))
+		}
+
+		// 从A2开始填起
+		if err = f.SetSheetRow("签到", fmt.Sprintf("A%d", i+2), &row); err != nil {
+			return nil, err
+		}
 	}
-	if err = writer.WriteAll(data); err != nil {
+	if buffer, err = f.WriteToBuffer(); err != nil {
 		return nil, err
 	}
-	return file, nil
+	return buffer, nil
 }

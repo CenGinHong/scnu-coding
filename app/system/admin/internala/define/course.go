@@ -25,7 +25,7 @@ type ListCourseResp struct {
 
 // CourseEnroll 选课的学生
 type CourseEnroll struct {
-	UserId       int    `orm:"a.user_id"         json:"userId"`     // 用户id
+	UserId       int    `orm:"a.user_id"       json:"userId"`       // 用户id
 	Email        string `orm:"email"           json:"email"`        // 邮箱，限30字
 	UserNum      string `orm:"user_num"        json:"userNum"`      // 学号/职工号，限20位
 	Major        string `orm:"major"           json:"major"`        // 专业
@@ -34,11 +34,11 @@ type CourseEnroll struct {
 }
 
 type RemoveCourseEnrollReq struct {
-	UserId   int
+	UserIds  []int
 	CourseId int
 }
 
 type AddStudent2ClassReq struct {
-	CourseId   int
-	StudentNum []string
+	CourseId    int
+	StudentNums []string
 }

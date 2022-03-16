@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/csv"
 	"github.com/gogf/gf/errors/gerror"
 	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/os/glog"
@@ -16,7 +15,6 @@ import (
 	"scnu-coding/app/model"
 	"scnu-coding/app/service"
 	"scnu-coding/app/system/admin/internala/define"
-	"scnu-coding/app/utils"
 	"scnu-coding/library/response"
 	"strconv"
 	"strings"
@@ -174,25 +172,25 @@ func (s *userService) ResetPassword(ctx context.Context, Id int) (err error) {
 	return nil
 }
 
-func (s userService) GetStudentImportTemplate(_ context.Context) (templateFile *bytes.Buffer, err error) {
-	templateFile = &bytes.Buffer{}
-	//写入bom头
-	utils.WriteBom(templateFile)
-	w := csv.NewWriter(templateFile)
-	defer w.Flush()
-	header := make([]string, 0)
-	header = append(header, "姓名*")
-	header = append(header, "学号*")
-	header = append(header, "性别")
-	header = append(header, "邮箱（若不填默认使用学院邮箱）")
-	header = append(header, "单位*")
-	header = append(header, "专业*")
-	header = append(header, "密码")
-	if err = w.Write(header); err != nil {
-		return nil, err
-	}
-	return templateFile, nil
-}
+//func (s userService) GetStudentImportTemplate(_ context.Context) (templateFile *bytes.Buffer, err error) {
+//	templateFile = &bytes.Buffer{}
+//	//写入bom头
+//	utils.WriteBom(templateFile)
+//	w := csv.NewWriter(templateFile)
+//	defer w.Flush()
+//	header := make([]string, 0)
+//	header = append(header, "姓名*")
+//	header = append(header, "学号*")
+//	header = append(header, "性别")
+//	header = append(header, "邮箱（若不填默认使用学院邮箱）")
+//	header = append(header, "单位*")
+//	header = append(header, "专业*")
+//	header = append(header, "密码")
+//	if err = w.Write(header); err != nil {
+//		return nil, err
+//	}
+//	return templateFile, nil
+//}
 
 func (s *userService) ImportStudent(ctx context.Context, template *ghttp.UploadFile, roleId int) (errMsg string, err error) {
 	file, err := template.Open()
@@ -208,7 +206,7 @@ func (s *userService) ImportStudent(ctx context.Context, template *ghttp.UploadF
 	if err != nil {
 		return "", err
 	}
-	rows, err := reader.GetRows("sheet1")
+	rows, err := reader.GetRows("Sheet1")
 	if err != nil {
 		return "", err
 	}

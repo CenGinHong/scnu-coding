@@ -25,6 +25,7 @@ func (c *courseAnnouncementAPI) Insert(r *ghttp.Request) {
 		response.Exit(r, err)
 		return
 	}
+	req.UploadFile = r.GetUploadFile("file")
 	if err := service.CourseAnnouncement.InsertCourseAnnouncement(r.Context(), req); err != nil {
 		response.Exit(r, err)
 		return
@@ -38,6 +39,7 @@ func (c *courseAnnouncementAPI) Update(r *ghttp.Request) {
 		response.Exit(r, err)
 		return
 	}
+	req.UploadFile = r.GetUploadFile("file")
 	if err := service.CourseAnnouncement.UpdateCourseAnnouncement(r.Context(), req); err != nil {
 		response.Exit(r, err)
 		return

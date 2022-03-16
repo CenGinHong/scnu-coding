@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"github.com/gogf/gf/database/gdb"
+	"github.com/gogf/gf/frame/g"
 	"scnu-coding/app/dao"
 	"scnu-coding/app/service"
 	"scnu-coding/app/system/web/internala/define"
@@ -23,6 +25,17 @@ type courseAnnouncementService struct{}
 // @return err
 // @date 2021-05-08 09:25:57
 func (c *courseAnnouncementService) InsertCourseAnnouncement(ctx context.Context, req *define.InsertCourseAnnouncementReq) (err error) {
+	if req.UploadFile != nil {
+		if req.AttachmentSrc, err = service.File.UploadFile(ctx, req.UploadFile); err != nil {
+			return err
+		}
+		defer func() {
+			if err != nil {
+				_ = service.File.RemoveObject(ctx, req.AttachmentSrc)
+			}
+		}()
+	}
+	// 插入新数据
 	if _, err = dao.CourseAnnouncement.Ctx(ctx).Insert(req); err != nil {
 		return err
 	}
@@ -36,7 +49,40 @@ func (c *courseAnnouncementService) InsertCourseAnnouncement(ctx context.Context
 // @return err
 // @date 2021-05-08 09:26:04
 func (c *courseAnnouncementService) UpdateCourseAnnouncement(ctx context.Context, req *define.UpdateCourseAnnouncementReq) (err error) {
-	if _, err = dao.CourseAnnouncement.Ctx(ctx).OmitNilData().WherePri(req.CourseAnnouncementId).Update(req); err != nil {
+	if err = g.DB().Transaction(ctx, func(ctx context.Context, tx *gdb.TX) error {
+		// 移除旧的文件
+		if req.IsRemoveFile {
+			attachmentSrc, err := dao.CourseAnnouncement.Ctx(ctx).TX(tx).
+				WherePri(req.CourseAnnouncementId).
+				Value(dao.Lab.Columns.AttachmentSrc)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				if err != nil {
+					_ = service.File.RemoveObject(ctx, attachmentSrc.String())
+				}
+			}()
+			if _, err = dao.CourseAnnouncement.Ctx(ctx).TX(tx).
+				WherePri(req.CourseAnnouncementId).
+				Data(g.Map{dao.Lab.Columns.AttachmentSrc: ""}).
+				Update(); err != nil {
+				return err
+			}
+		}
+		if req.UploadFile != nil {
+			req.AttachmentSrc, err = service.File.UploadFile(ctx, req.UploadFile)
+			if err != nil {
+				return err
+			}
+		}
+		if _, err = dao.CourseAnnouncement.Ctx(ctx).TX(tx).
+			WherePri(req.CourseAnnouncementId).
+			Update(req); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
 	return nil

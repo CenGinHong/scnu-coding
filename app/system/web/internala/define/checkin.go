@@ -76,13 +76,22 @@ type CheckinRecordResp struct {
 }
 
 type ExportCheckinRecord struct {
-	gmeta.Meta      `orm:"table:checkin_record"`
-	CheckinRecordId int    `orm:"checkin_record_id"` // id
-	CheckinName     string `orm:"checkin_name"`
-	CheckinDetails  []*struct {
-		gmeta.Meta      `orm:"table:checkin_detail"`
-		CheckinRecordId int  `orm:"checkin_record_id"` // 签到记录id
+	gmeta.Meta `orm:"table:re_course_user"`
+	UserId     int `orm:"user_id"         json:"-"`
+	UserDetail struct {
+		gmeta.Meta   `orm:"table:sys_user"`
+		UserId       int    `orm:"user_id"         json:"userId"`       // 用户id
+		Email        string `orm:"email"           json:"email"`        // 邮箱，限30字
+		UserNum      string `orm:"user_num"        json:"userNum"`      // 学号/职工号，限20位
+		Grade        int    `orm:"grade"           json:"grade"`        // 年级
+		School       string `orm:"school"          json:"school"`       // 学院
+		Major        string `orm:"major"           json:"major"`        // 专业
+		Username     string `orm:"username"        json:"username"`     // 真实姓名，限6字
+		Organization string `orm:"organization"    json:"organization"` // 单位，例如计算机学院，限15字
+	} `orm:"with:user_id" json:"userDetail"`
+	CheckinDetails []*struct {
+		CheckinRecordId int  // 签到记录id
 		UserId          int  // 参与签到的人
 		IsCheckin       bool // 是否签到
-	} `orm:"with:checkin_record_id"`
+	}
 }

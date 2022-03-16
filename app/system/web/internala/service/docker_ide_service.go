@@ -154,11 +154,11 @@ func (d dockerIDEService) getEnv(_ context.Context, req *define.OpenIDEReq) (env
 func (d dockerIDEService) getBinds(ctx context.Context, req *define.OpenIDEReq) (mountMapping []string, err error) {
 	mountMapping = make([]string, 0)
 	// 工作区使用userId和labId来标识
-	workDirHost := getWorkDirHostPath(ctx, &req.IDEIdentifier)
+	workDirHost := getIDEWorkDirHostPath(ctx, &req.IDEIdentifier)
 	// 映射工作目录
 	mountMapping = append(mountMapping, fmt.Sprintf("%s:/home/coder/project", workDirHost))
 	// 映射配置目录
-	configHost, err := getConfigPath(ctx, &req.IDEIdentifier)
+	configHost, err := getIDEConfigPath(ctx, &req.IDEIdentifier)
 	if err != nil {
 		return nil, err
 	}

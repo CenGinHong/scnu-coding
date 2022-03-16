@@ -6,7 +6,6 @@ package utils
 // 可直接使用，不建议修改
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -205,18 +204,20 @@ func (c *MossClient) sendLanguage() error {
 	if c.currentStage != awaitingLanguage {
 		return errors.New("language_enum already sent or client is not initialized yet")
 	}
-	if err := c.sendCommand("language_enum", c.language); err != nil {
+	if err := c.sendCommand("language", c.language); err != nil {
 		return err
 	}
-	serverByte := &bytes.Buffer{}
-	if _, err := c.conn.Read(serverByte.Bytes()); err != nil {
+	b := make([]byte, 1024)
+	n, err := c.conn.Read(b)
+	if err != nil {
 		return err
 	}
-	serverString := serverByte.String()
-	if len(serverString) > 0 && string(serverString) == "yes" {
+	//print(n)
+	serverString := string(b[:n])
+	if len(serverString) > 0 && strings.HasPrefix(serverString, "yes") {
 		c.currentStage = awaitingFiles
 	} else {
-		return errors.New("MOSS Server does not recognize this programming language_enum")
+		return errors.New("MOSS Server does not recognize this programming language")
 	}
 	return nil
 }
@@ -235,11 +236,13 @@ func (c *MossClient) SendQuery() (err error) {
 			return nil
 		}
 		c.currentStage = awaitingResults
-		serverByte := &bytes.Buffer{}
-		if _, err = c.conn.Read(serverByte.Bytes()); err != nil {
+		//serverByte := &bytes.Buffer{}
+		b := make([]byte, 1024)
+		n, err := c.conn.Read(b)
+		if err != nil {
 			return err
 		}
-		result := serverByte.String()
+		result := string(b[:n-1])
 		if len(result) > 0 && strings.HasPrefix(strings.ToLower(result), "http") {
 			if c.ResultURL, err = url.Parse(strings.Trim(result, " ")); err != nil {
 				return err

@@ -142,12 +142,12 @@ type ContainerStat struct {
 
 //type CheckCodeReq struct {
 //	TeacherId int
-//	StuId     int
+//	UserId     int
 //	LabId     int
 //}
 
 //type CompilerErrorLogResp struct {
-//	StuId       int    `json:"stuId"`
+//	UserId       int    `json:"stuId"`
 //	StuNum      string `json:"stuNum"`
 //	CompilerLog string `json:"compilerLog"`
 //}

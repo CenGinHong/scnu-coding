@@ -11,11 +11,12 @@ import (
 )
 
 type InsertLabReq struct {
-	CourseId   int               // 该实验隶属的课程
-	Title      string            // 标题
-	Content    string            // 实验内容简介
-	UploadFile *ghttp.UploadFile // 实验附件
-	DeadLine   *gtime.Time       // 截止时间
+	CourseId      int               // 该实验隶属的课程
+	Title         string            // 标题
+	Content       string            // 实验内容简介
+	UploadFile    *ghttp.UploadFile // 实验附件
+	DeadLine      *gtime.Time       // 截止时间
+	AttachmentSrc string            // 实验附件url
 }
 
 type LabDetailResp struct {
@@ -46,12 +47,13 @@ type LabDetailResp struct {
 }
 
 type UpdateLabReq struct {
-	LabId        int               `orm:"lab_id,primary"` // 主键
-	Title        string            `orm:"title"`          // 标题
-	UploadFile   *ghttp.UploadFile // 实验附件
-	IsRemoveFile bool              // 是否把文件移除了
-	Content      string            `orm:"content"`  // 实验内容描述
-	Deadline     *gtime.Time       `orm:"deadline"` // 截止时间
+	LabId         int               `orm:"lab_id,primary"` // 主键
+	Title         string            `orm:"title"`          // 标题
+	UploadFile    *ghttp.UploadFile // 实验附件
+	IsRemoveFile  bool              // 是否把文件移除了
+	Content       string            `orm:"content"`        // 实验内容描述
+	Deadline      *gtime.Time       `orm:"deadline"`       // 截止时间
+	AttachmentSrc string            `orm:"attachment_src"` // 实验附件url
 }
 
 //type demo struct {

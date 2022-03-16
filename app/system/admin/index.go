@@ -17,7 +17,7 @@ func Init() {
 			group.DELETE("/:id", api.User.DeleteUser)
 			group.Group("/import", func(group *ghttp.RouterGroup) {
 				group.GET("/demo", api.User.GetImportDemoCsv)
-				group.POST("/", api.User.ImportUserIdByCsv)
+				group.POST("/", api.User.ImportUserIdByExcel)
 			})
 			group.GET("/:id", api.User.GetUser)
 		})

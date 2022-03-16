@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/gogf/gf/encoding/gurl"
 	"github.com/gogf/gf/net/ghttp"
 	"scnu-coding/app/system/admin/internala/define"
 	"scnu-coding/app/system/admin/internala/service"
@@ -59,13 +60,14 @@ func (a *userApi) GetImportDemoCsv(r *ghttp.Request) {
 		response.Exit(r, err)
 		return
 	}
-	r.Response.Header().Set("Content-Disposition", "attachment;filename=demo.xlsx")
+	r.Response.Header().Add("Access-Control-Expose-Headers", "Content-Disposition")
+	r.Response.Header().Add("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf8")
+	r.Response.Header().Add("Content-Disposition", "attachment;filename="+gurl.Encode("demo.xlsx"))
 	// 响应类型,编码
-	r.Response.Header().Set("Content-Type", "application/vnd.ms-excel;charset=utf8")
 	r.Response.WriteExit(csv)
 }
 
-func (a *userApi) ImportUserIdByCsv(r *ghttp.Request) {
+func (a *userApi) ImportUserIdByExcel(r *ghttp.Request) {
 	file := r.GetUploadFile("file")
 	roleId := r.GetInt("roleId")
 	errMsg, err := service.SysUser.ImportStudent(r.Context(), file, roleId)
@@ -75,6 +77,7 @@ func (a *userApi) ImportUserIdByCsv(r *ghttp.Request) {
 	}
 	response.Succ(r, errMsg)
 }
+
 func (a *userApi) DeleteUser(r *ghttp.Request) {
 	userId := r.GetInt("id")
 	if err := service.SysUser.DeleteUser(r.Context(), userId); err != nil {

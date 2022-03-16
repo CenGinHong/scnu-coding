@@ -99,13 +99,13 @@ func (f *fileService) UploadFile(ctx context.Context, uploadFile *ghttp.UploadFi
 
 func (f *fileService) UploadFileAndGetUrl(ctx context.Context, uploadFile *ghttp.UploadFile) (url string, err error) {
 	// 打开文件
-	file, err := f.UploadFile(ctx, uploadFile)
+	filename, err := f.UploadFile(ctx, uploadFile)
 	if err != nil {
 		return "", err
 	}
-	url = fmt.Sprintf("%s/%s", f.minio.EndpointURL().Host, file)
+	//url = fmt.Sprintf("%s/%s", f.minio.EndpointURL(),f.bucket,filename)
 	// 返回fileName
-	return url, nil
+	return f.GetObjectUrl(ctx, filename), nil
 }
 
 // RemoveObject 根据url删除文件

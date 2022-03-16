@@ -35,7 +35,7 @@ func newIDE() (t iIDE) {
 	// 获取配置文件中填入的配置方式
 	switch g.Cfg().GetString("ide.deploymentType") {
 	case "docker":
-		//t = newDockerIDEService()
+		t = newDockerIDEService()
 	//case "k3s":
 	//	t = newK3sIDEService()
 	case "swarmIDEService":
@@ -74,13 +74,19 @@ func getImageName(languageEnum int) (imageName string) {
 	return ""
 }
 
-func getWorkDirHostPath(_ context.Context, ident *define.IDEIdentifier) (workDirPath string) {
+func getIDEWorkDirHostPath(_ context.Context, ident *define.IDEIdentifier) (workDirPath string) {
 	workspaceBasePathRemote := g.Cfg().GetString("ide.deployment.storage.workspaceBasePathRemote")
 	workDirPath = fmt.Sprintf("%s/%d/%d", workspaceBasePathRemote, ident.UserId, ident.LabId)
 	return workDirPath
 }
 
-func getConfigPath(ctx context.Context, ident *define.IDEIdentifier) (configPath string, err error) {
+func getServiceLocalPath(_ context.Context, ident *define.IDEIdentifier) (workDirPath string) {
+	localPath := g.Cfg().GetString("ide.deployment.storage.serviceLocalPath")
+	workDirPath = fmt.Sprintf("%s/%d/%d", localPath, ident.UserId, ident.LabId)
+	return workDirPath
+}
+
+func getIDEConfigPath(ctx context.Context, ident *define.IDEIdentifier) (configPath string, err error) {
 	configBasePathRemote := g.Cfg().GetString("ide.deployment.storage.configBasePathRemote")
 	language, err := getLanguageByLabId(ctx, ident.LabId)
 	if err != nil {

@@ -31,8 +31,8 @@ type CodeData struct {
 }
 
 type ReadCodeDataReq struct {
-	StuId int
-	LabId int
+	UserId int
+	LabId  int
 }
 
 type ListLabSubmitResp struct {
@@ -106,15 +106,24 @@ type UpdateLabFinishReq struct {
 }
 
 type ExportLabScore struct {
-	gmeta.Meta       `orm:"table:lab"`
-	LabId            int    `orm:"lab_id"`
-	Title            string `orm:"title"` // 标题
+	gmeta.Meta `orm:"table:re_course_user"`
+	UserId     int `orm:"user_id"         json:"-"`
+	UserDetail struct {
+		gmeta.Meta   `orm:"table:sys_user"`
+		UserId       int    `orm:"user_id"         json:"userId"`       // 用户id
+		Email        string `orm:"email"           json:"email"`        // 邮箱，限30字
+		UserNum      string `orm:"user_num"        json:"userNum"`      // 学号/职工号，限20位
+		Grade        int    `orm:"grade"           json:"grade"`        // 年级
+		School       string `orm:"school"          json:"school"`       // 学院
+		Major        string `orm:"major"           json:"major"`        // 专业
+		Username     string `orm:"username"        json:"username"`     // 真实姓名，限6字
+		Organization string `orm:"organization"    json:"organization"` // 单位，例如计算机学院，限15字
+	} `orm:"with:user_id" json:"userDetail"`
 	LabSubmitDetails []*struct {
-		gmeta.Meta `orm:"table:lab_submit"`
-		LabId      int  `orm:"lab_id"`
-		Score      *int `orm:"score"`
-		UserId     int  `orm:"user_id"`
-	} `orm:"with:lab_id"`
+		LabId  int `orm:"lab_id"`
+		Score  int `orm:"score"`
+		UserId int `orm:"user_id"`
+	}
 }
 
 type ExportLabScoreReq struct {

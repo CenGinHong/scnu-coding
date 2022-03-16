@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/gogf/gf/frame/g"
@@ -197,6 +199,29 @@ func (d *dockerUtil) ServerInfo(ctx context.Context) (info *types.Info, err erro
 		return nil, err
 	}
 	return &info1, nil
+}
+
+func (d *dockerUtil) CreateVolumeForNfs(ctx context.Context, volumeName string, addr string, path string) {
+	// 查找该存储卷是否已经被创建
+	list, err := d.client.VolumeList(ctx, filters.NewArgs(filters.KeyValuePair{Key: "name", Value: volumeName}))
+	if err != nil {
+		return
+	}
+	// 已存在，返回
+	if len(list.Volumes) > 0 {
+		return
+	}
+	// 创建nfs存储卷
+	if _, err = d.client.VolumeCreate(ctx, volume.VolumeCreateBody{
+		Driver: "local",
+		DriverOpts: map[string]string{
+			"type":   "nfs",
+			"o":      fmt.Sprintf("addr=%s,rw", addr),
+			"device": fmt.Sprintf(":%s", path),
+		},
+	}); err != nil {
+		return
+	}
 }
 
 func (d dockerUtil) T() {

@@ -55,7 +55,7 @@ func (l *labApi) Update(r *ghttp.Request) {
 }
 
 func (l *labApi) Delete(r *ghttp.Request) {
-	labId := r.GetInt("labId")
+	labId := r.GetInt("id")
 	// 查看开实验的人是不是用户
 	if err := service.Lab.Delete(r.Context(), labId); err != nil {
 		response.Exit(r, err)

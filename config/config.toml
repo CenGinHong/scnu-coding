@@ -29,22 +29,25 @@
         link = "mysql:horace:Scipio1322?@tcp(93.179.125.223:3306)/scnu_coding"
         prefix = ""
 [minio]
-    endpoint = "localhost:9000"
+    endpoint = "121.40.144.58:9000"
     accessKeyId = "horace"
-    secretAccessKey = "scipio1322?"
+    secretAccessKey = "Scipio1322?"
     bucket = "scnu-coding"
     location = "cn-north-1"
     protocol = "http"
 
 [redis]
-    default = "localhost:6379,0,Scipio1322?"
+    default = "10.50.3.213:6379,0,Scipio1322?"
+
+[moss]
+    userId = "604014254"
 
 [ide]
     # 目前只有两种方式，docker，k3s
     deploymentType = "docker"
     # docker运行的主机
     [ide.deployment.docker]
-        host = "192.168.0.110"
+        host = "121.40.144.58"
         port = "2375"
         protocol = "tcp"
         [ide.deployment.docker.tls]
@@ -62,8 +65,9 @@
         pass = "TefmYnzGKFVa"
     # 代码存储的主机，如果是docker环境
     [ide.deployment.storage]
-        workspaceBasePathRemote = "/home/horace/scnu_coding"
-        configBasePathRemote = "/home/horace/scnu_coding"
+        workspaceBasePathRemote = "/home/scnu/scnu_coding"
+        configBasePathRemote = "/home/scnu/scnu_coding"
+        serviceLocalPath = "/data"
     [ide.container.connect]
         port = "8199"
         ip = "localhost"
@@ -83,7 +87,7 @@
 
 # Database.
 [database]
-    link  = "mysql:root:Scipio1322?@tcp(localhost:3306)/scnu_coding"
+    link  = "mysql:root:Scipio1322?@tcp(121.40.144.58:3306)/scnu_coding"
     debug = true
     # Database logger.
     [database.logger]

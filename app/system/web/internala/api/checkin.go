@@ -1,7 +1,7 @@
 package api
 
 import (
-	"fmt"
+	"github.com/gogf/gf/encoding/gurl"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
 	"scnu-coding/app/system/web/internala/define"
@@ -134,16 +134,13 @@ func (a *checkinAPI) DeleteCheckinRecord(r *ghttp.Request) {
 
 func (a *checkinAPI) ExportCheckinRecord(r *ghttp.Request) {
 	courseId := r.GetInt("courseId")
-	file, err := service.Checkin.ExportCheckinCsv(r.Context(), courseId)
+	file, err := service.Checkin.ExportCheckinToExcel(r.Context(), courseId)
 	if err != nil {
 		response.Exit(r, err)
 		return
 	}
-	r.Response.Header().Set("Pragma", "No-cache")
-	r.Response.Header().Set("Cache-Control", "No-cache")
-	r.Response.Header().Set("Expires", "0")
-	r.Response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", "签到表"))
-	r.Response.Header().Set("Content-Type", "text/csv")
-	r.Response.Write(file)
-	r.Response.Flush()
+	r.Response.Header().Add("Access-Control-Expose-Headers", "Content-Disposition")
+	r.Response.Header().Add("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf8")
+	r.Response.Header().Add("Content-Disposition", "attachment;filename="+gurl.Encode("签到.xlsx"))
+	r.Response.WriteExit(file)
 }

@@ -73,7 +73,7 @@ func (s *courseService) ListEnroll(ctx context.Context, courseId int) (resp *res
 
 func (s *courseService) RemoveCourseEnroll(ctx context.Context, req *define.RemoveCourseEnrollReq) (err error) {
 	if _, err = dao.ReCourseUser.Ctx(ctx).Where(g.Map{
-		dao.ReCourseUser.Columns.UserId:   req.UserId,
+		dao.ReCourseUser.Columns.UserId:   req.UserIds,
 		dao.ReCourseUser.Columns.CourseId: req.CourseId,
 	}).Delete(); err != nil {
 		return err
@@ -84,7 +84,7 @@ func (s *courseService) RemoveCourseEnroll(ctx context.Context, req *define.Remo
 func (s *courseService) AddStudent2Class(ctx context.Context, req *define.AddStudent2ClassReq) (errMsg string, err error) {
 	data := make([]g.Map, 0)
 	sb := &strings.Builder{}
-	for _, r := range req.StudentNum {
+	for _, r := range req.StudentNums {
 		// 找到对应的id
 		userId, err := dao.SysUser.Ctx(ctx).Where(dao.SysUser.Columns.UserNum, r).Value(dao.SysUser.Columns.UserId)
 		if err != nil {
@@ -99,8 +99,10 @@ func (s *courseService) AddStudent2Class(ctx context.Context, req *define.AddStu
 			})
 		}
 	}
-	if _, err = dao.ReCourseUser.Ctx(ctx).Batch(len(data)).Data(data).InsertIgnore(); err != nil {
-		return "", err
+	if len(data) > 0 {
+		if _, err = dao.ReCourseUser.Ctx(ctx).Batch(len(data)).Data(data).InsertIgnore(); err != nil {
+			return "", err
+		}
 	}
 	return sb.String(), nil
 }
