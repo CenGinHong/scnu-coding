@@ -1,7 +1,5 @@
 FROM loads/alpine:3.8
 
-LABEL maintainer="john@goframe.org"
-
 ###############################################################################
 #                                INSTALLATION
 ###############################################################################
@@ -16,7 +14,7 @@ RUN chmod +x $WORKDIR/main
 # 添加I18N多语言文件、静态文件、配置文件、模板文件
 ADD i18n     $WORKDIR/i18n
 ADD public   $WORKDIR/public
-ADD config   $WORKDIR/config
+#ADD config   $WORKDIR/config
 ADD template $WORKDIR/template
 
 ###############################################################################

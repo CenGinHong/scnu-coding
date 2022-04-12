@@ -3,8 +3,6 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/os/gfile"
 	"github.com/gogf/gf/os/gtime"
@@ -88,29 +86,30 @@ func TestDocker(t *testing.T) {
 	//m["D:\\project"] = "/home/coder/project"
 	//p := make(map[string]string)
 	//p["3306"]="8080"
-	//err := utils.DockerUtil.RunContainer(context.Background(), "codercom/code-server:latest", p, m, env, "root","test1")
+	//err := utils.DockerUtil.RunDocker(context.Background(), "codercom/code-server:latest", p, m, env, "root","test1")
 	//if err != nil {
 	//	return
 	//}
 	//fil := filters.NewArgs(filters.KeyValuePair{Key: "name",Value: "redis"})
-	images, err := utils.DockerUtil.ListImages(context.Background())
-	if err != nil {
-		return
-	}
-	for _, image := range images {
-		print(image.ID)
-	}
-
-	containers, err := utils.DockerUtil.ListContainer(context.Background(), types.ContainerListOptions{
-		All:     false,
-		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: "ide-2-8"}),
-	})
-	if err != nil {
-		print(err)
-	}
-	for _, container := range containers {
-		fmt.Print(container.Ports[0])
-	}
+	//images, err := utils.DockerUtil.ListImages(context.Background())
+	//if err != nil {
+	//	return
+	//}
+	//for _, image := range images {
+	//	print(image.ID)
+	//}
+	//
+	utils.DockerUtil.T()
+	//containers, err := utils.DockerUtil.ListContainer(context.Background(), types.ContainerListOptions{
+	//	All:     false,
+	//	Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: "ide-2-8"}),
+	//})
+	//if err != nil {
+	//	print(err)
+	//}
+	//for _, container := range containers {
+	//	fmt.Print(container.Ports[0])
+	//}
 }
 
 func TestIDE(t *testing.T) {

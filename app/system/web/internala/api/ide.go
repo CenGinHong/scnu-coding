@@ -36,16 +36,16 @@ func (i *ideAPI) OpenIDE(r *ghttp.Request) {
 	response.Succ(r, g.Map{"url": url})
 }
 
-// FrontAlive ide前端插件发来的存活信息
+// Heartbeat ide前端插件发来的存活信息
 // @receiver i *ideAPI
 // @param r *ghttp.Request
 // @date 2021-07-17 22:28:18
-func (i *ideAPI) FrontAlive(r *ghttp.Request) {
-	var req *define.FrontAliveReq
+func (i *ideAPI) Heartbeat(r *ghttp.Request) {
+	var req *define.HeartBeatReq
 	if err := r.Parse(&req); err != nil {
 		response.Exit(r, err)
 	}
-	if err := service.IDE.FrontAlive(r.Context(), req); err != nil {
+	if err := service.IDE.Heartbeat(r.Context(), req); err != nil {
 		response.Exit(r, err)
 	}
 	response.Succ(r)

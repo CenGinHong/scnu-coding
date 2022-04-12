@@ -20,6 +20,10 @@ type iIDE interface {
 	OpenIDE(ctx context.Context, req *define.OpenIDEReq) (url string, err error)
 	// RemoveIDE 关闭容器操作
 	RemoveIDE(ctx context.Context, req *define.IDEIdentifier) (err error)
+	// ListServerInfo 列举服务器信息
+	ListServerInfo(ctx context.Context) (err error)
+
+	ListIDEContainerName(ctx context.Context) []string
 }
 
 //// idePortCache 记录每一个容器所占用
@@ -36,15 +40,11 @@ func newIDE() (t iIDE) {
 	switch g.Cfg().GetString("ide.deploymentType") {
 	case "docker":
 		t = newDockerIDEService()
-	//case "k3s":
-	//	t = newK3sIDEService()
-	case "swarmIDEService":
-		//t = newSwarmService()
+	case "swarm":
+		t = newSwarmService()
 	default:
 		panic("不支持的IDE容器部署方式")
 	}
-	// 在服务重启阶段清理所有已开启的IDE容器
-	//clearAllIde(t.removeIDE)
 	return t
 }
 
@@ -75,19 +75,19 @@ func getImageName(languageEnum int) (imageName string) {
 }
 
 func getIDEWorkDirHostPath(_ context.Context, ident *define.IDEIdentifier) (workDirPath string) {
-	workspaceBasePathRemote := g.Cfg().GetString("ide.deployment.storage.workspaceBasePathRemote")
+	workspaceBasePathRemote := g.Cfg().GetString("ide.storage.workspaceBasePathRemote")
 	workDirPath = fmt.Sprintf("%s/%d/%d", workspaceBasePathRemote, ident.UserId, ident.LabId)
 	return workDirPath
 }
 
 func getServiceLocalPath(_ context.Context, ident *define.IDEIdentifier) (workDirPath string) {
-	localPath := g.Cfg().GetString("ide.deployment.storage.serviceLocalPath")
+	localPath := g.Cfg().GetString("ide.storage.serviceLocalPath")
 	workDirPath = fmt.Sprintf("%s/%d/%d", localPath, ident.UserId, ident.LabId)
 	return workDirPath
 }
 
 func getIDEConfigPath(ctx context.Context, ident *define.IDEIdentifier) (configPath string, err error) {
-	configBasePathRemote := g.Cfg().GetString("ide.deployment.storage.configBasePathRemote")
+	configBasePathRemote := g.Cfg().GetString("ide.storage.configBasePathRemote")
 	language, err := getLanguageByLabId(ctx, ident.LabId)
 	if err != nil {
 		return "", err
@@ -103,9 +103,52 @@ func getLanguageByLabId(ctx context.Context, labId int) (language int, err error
 		return 0, err
 	}
 	// 找语言类型
-	languageType, err := dao.Course.Ctx(ctx).WherePri(courseId).Value(dao.Course.Columns.LanguageType)
+	languageType, err := dao.Course.Ctx(ctx).WherePri(dao.Course.Columns.CourseId, courseId).Value(dao.Course.Columns.LanguageType)
 	if err != nil {
 		return 0, err
 	}
 	return languageType.Int(), nil
+}
+
+func getEnv(_ context.Context, req *define.OpenIDEReq) (env []string) {
+	env = make([]string, 0)
+	// 密码
+	env = append(env, "PASSWORD=12345678")
+	// 用户名
+	env = append(env, fmt.Sprintf("USERID=%d", req.UserId))
+	// 实验id
+	env = append(env, fmt.Sprintf("LABID=%d", req.LabId))
+	// 下面用于是插件和后端通信的环境变量
+	ip := g.Cfg().GetString("ide.container.heartbeat.ip")
+	port := g.Cfg().GetString("ide.container.heartbeat.port")
+	heartbeatPath := g.Cfg().GetString("ide.container.heartbeat.heartbeatPath")
+	openUrl := fmt.Sprintf("http://%s:%s%s", ip, port, heartbeatPath)
+	env = append(env, fmt.Sprintf("CONNECT_URL=%s", openUrl))
+	env = append(env, "DOCKER_USER=coder")
+	return env
+}
+
+func getBinds(ctx context.Context, req *define.OpenIDEReq) (mountMapping []string, err error) {
+	mountMapping = make([]string, 0)
+	// 工作区使用userId和labId来标识
+	workDirHost := getIDEWorkDirHostPath(ctx, &req.IDEIdentifier)
+	// 映射工作目录
+	workDirMapping := fmt.Sprintf("%s:/home/coder/project", workDirHost)
+	if !req.IsEditAble {
+		workDirMapping = workDirMapping + ":ro"
+	}
+	mountMapping = append(mountMapping, workDirMapping)
+	// 映射配置目录
+	configHost, err := getIDEConfigPath(ctx, &req.IDEIdentifier)
+	if err != nil {
+		return nil, err
+	}
+	mountMapping = append(mountMapping, fmt.Sprintf("%s:/root/.local/share/code-server", configHost))
+	return mountMapping, nil
+}
+
+func getPort(_ context.Context) (portMap []string) {
+	// 端口映射
+	portMap = []string{"0:8080"}
+	return portMap
 }

@@ -7,13 +7,17 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/os/glog"
+	"github.com/gogf/gf/util/gconv"
 	"io"
 	"scnu-coding/app/system/web/internala/define"
+	"strings"
 	"time"
 )
 
@@ -25,23 +29,23 @@ type dockerUtil struct {
 
 func newDockerUtil() (d dockerUtil) {
 	// 拼装docker remote api 地址
-	host := g.Cfg().GetString("ide.deployment.docker.host")
-	port := g.Cfg().GetString("ide.deployment.docker.port")
-	protocol := g.Cfg().GetString("ide.deployment.docker.protocol")
-	addr := fmt.Sprintf("%s://%s:%s", protocol, host, port)
-	if protocol == "tcp" {
-		cli, err := client.NewClientWithOpts(client.WithHost(addr), client.WithAPIVersionNegotiation())
+	host := fmt.Sprintf("tcp://%s:%s", g.Cfg().GetString("docker.ip"),
+		g.Cfg().GetString("docker.port"))
+	isTslVerify := g.Cfg().GetBool("docker.withTlsVerify")
+	if isTslVerify {
+		// 连接加密
+		path := g.Cfg().GetString("docker.ca")
+		cacertPath := fmt.Sprintf("%s/%s", path, "ca.pem")
+		certPath := fmt.Sprintf("%s/%s", path, "cert.pem")
+		keyPath := fmt.Sprintf("%s/%s", path, "key.pem")
+		cli, err := client.NewClientWithOpts(client.WithHost(host),
+			client.WithTLSClientConfig(cacertPath, certPath, keyPath))
 		if err != nil {
 			panic(err)
 		}
 		d = dockerUtil{cli}
 	} else {
-		// tls加密连接
-		caPath := g.Cfg().GetString("ide.ide.deployment.docker.tls.caPath")
-		certPath := g.Cfg().GetString("ide.ide.deployment.docker.tls.certPath")
-		keyPath := g.Cfg().GetString("ide.ide.deployment.docker.tls.keyPath")
-		cli, err := client.NewClientWithOpts(client.WithHost(addr), client.WithAPIVersionNegotiation(),
-			client.WithTLSClientConfig(caPath, certPath, keyPath))
+		cli, err := client.NewClientWithOpts(client.WithHost(host), client.WithAPIVersionNegotiation())
 		if err != nil {
 			panic(err)
 		}
@@ -57,7 +61,7 @@ func newDockerUtil() (d dockerUtil) {
 // @return imageList
 // @return err
 // @date 2021-12-21 10:56:50
-func (d dockerUtil) ListImages(ctx context.Context) (imageList []types.ImageSummary, err error) {
+func (d *dockerUtil) ListImages(ctx context.Context) (imageList []types.ImageSummary, err error) {
 	imageList, err = d.client.ImageList(ctx, types.ImageListOptions{All: true})
 	if err != nil {
 		return nil, err
@@ -73,7 +77,7 @@ func (d dockerUtil) ListImages(ctx context.Context) (imageList []types.ImageSumm
 // @return containerStat
 // @return err
 // @date 2021-12-30 13:18:00
-func (d dockerUtil) GetContainerStat(ctx context.Context, containerID string) (containerStat *define.ContainerStat, err error) {
+func (d *dockerUtil) GetContainerStat(ctx context.Context, containerID string) (containerStat *define.ContainerStat, err error) {
 	stats, err := d.client.ContainerStatsOneShot(ctx, containerID)
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
@@ -106,48 +110,76 @@ func (d dockerUtil) GetContainerStat(ctx context.Context, containerID string) (c
 // @return containers
 // @return err
 // @date 2021-12-21 10:57:48
-func (d *dockerUtil) ListContainer(ctx context.Context, opts types.ContainerListOptions) (containers []types.Container, err error) {
-	containers, err = d.client.ContainerList(ctx, opts)
-
+func (d *dockerUtil) ListContainer(ctx context.Context, filter map[string]string) (containers []types.Container, err error) {
+	args := make([]filters.KeyValuePair, 0)
+	for k, v := range filter {
+		args = append(args, filters.KeyValuePair{Key: k, Value: v})
+	}
+	containers, err = d.client.ContainerList(ctx, types.ContainerListOptions{
+		All:     true,
+		Filters: filters.NewArgs(args...),
+	})
 	if err != nil {
 		return nil, err
 	}
 	return containers, nil
 }
 
-// RunContainer
-// @Description 运行一个容器
+// RunDocker
+// @Description
 // @receiver d
 // @param ctx
-// @param imageName 容器名称
-// @param portMap 目录挂载匹配，前面的是宿主机卷，后面是容器端口
-// @param binds 端口匹配，全面是宿主机端口，后面是容器端口
-// @param env 环境目录
-// @param containerName
+// @param imageName 镜像名
+// @param portMap 端口映射，形如 ["80:8080"]
+// @param binds 路径映射，形如["/home/test:/home"]
+// @param env 环境变量
+// @param containerName 镜像名
+// @return *container.ContainerCreateCreatedBody
 // @return error
-// @date 2021-12-21 10:58:08
-func (d *dockerUtil) RunContainer(ctx context.Context, imageName string,
-	portMap nat.PortMap, binds []string, env []string, containerName string) (*container.ContainerCreateCreatedBody, error) {
+// @date 2022-03-20 17:08:58
+func (d *dockerUtil) RunDocker(ctx context.Context, imageName string,
+	portMap []string, binds []string, env []string, containerName string) (containerId string, err error) {
+	// 准备端口
+	p := make(nat.PortMap, 0)
+	for _, s := range portMap {
+		// 拆分为宿主机端口和容器端口
+		split := strings.Split(s, ":")
+		// 绑定容器端口
+		port, err := nat.NewPort("tcp", split[1])
+		if err != nil {
+			return "0", err
+		}
+		portBind := nat.PortBinding{}
+		if split[0] != "0" {
+			portBind.HostPort = split[0]
+		}
+		tmp := make([]nat.PortBinding, 0, 1)
+		tmp = append(tmp, portBind)
+		p[port] = tmp
+	}
+	if err != nil {
+		return "", err
+	}
 	// 构建容器
 	c, err := d.client.ContainerCreate(ctx, &container.Config{
 		Image: imageName,
 		Env:   env,
-		Tty:   false,
+		Tty:   true,
 		User:  "root",
 	}, &container.HostConfig{
 		Binds:        binds,
-		PortBindings: portMap,
+		PortBindings: p,
 		Privileged:   true,
 		AutoRemove:   true,
 	}, nil, nil, containerName)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	// 启动容器
 	if err = d.client.ContainerStart(ctx, c.ID, types.ContainerStartOptions{}); err != nil {
-		return nil, err
+		return "", err
 	}
-	return &c, nil
+	return c.ID, nil
 }
 
 // ImagePull
@@ -224,6 +256,127 @@ func (d *dockerUtil) CreateVolumeForNfs(ctx context.Context, volumeName string, 
 	}
 }
 
-func (d dockerUtil) T() {
+func (d *dockerUtil) DaemonHost() string {
+	return d.client.DaemonHost()
+}
 
+func (d *dockerUtil) RunService(ctx context.Context, imageName string,
+	portMap []string, binds []string, env []string, containerName string) (serviceId string, err error) {
+	// 准备nfs挂载
+	nfsAddr := g.Cfg().GetString("ide.storage.nfsAddr")
+	mountList := make([]mount.Mount, 0)
+	for _, bind := range binds {
+		split := strings.Split(bind, ":")
+		mountList = append(mountList, mount.Mount{Type: mount.TypeVolume, Target: split[1], VolumeOptions: &mount.VolumeOptions{
+			DriverConfig: &mount.Driver{
+				Name: "local",
+				Options: map[string]string{
+					"type":   "nfs",
+					"o":      fmt.Sprintf("addr=%s,rw", nfsAddr),
+					"device": fmt.Sprintf(":%s", split[0]),
+				},
+			},
+		}})
+	}
+	// 准备端口
+	p := make([]swarm.PortConfig, 0)
+	for _, s := range portMap {
+		// 拆分为宿主机端口和容器端口
+		split := strings.Split(s, ":")
+		// 绑定容器端口
+		tmp := swarm.PortConfig{TargetPort: gconv.Uint32(split[1])}
+		if split[0] != "0" {
+			tmp.PublishedPort = gconv.Uint32(split[0])
+		}
+		p = append(p, tmp)
+	}
+	// 创建服务
+	serviceCreateResponse, err := d.client.ServiceCreate(ctx, swarm.ServiceSpec{
+		Annotations: swarm.Annotations{
+			Name: containerName,
+		},
+		TaskTemplate: swarm.TaskSpec{
+			ContainerSpec: &swarm.ContainerSpec{
+				Image:  imageName,
+				User:   "root",
+				Env:    env,
+				TTY:    true,
+				Mounts: mountList,
+			},
+		},
+		EndpointSpec: &swarm.EndpointSpec{
+			Ports: p,
+		},
+	}, types.ServiceCreateOptions{})
+	if err != nil {
+		return "0", err
+	}
+	return serviceCreateResponse.ID, nil
+}
+
+func (d *dockerUtil) ListService(ctx context.Context, filter map[string]string) (services []swarm.Service, err error) {
+	args := make([]filters.KeyValuePair, 0)
+	for k, v := range filter {
+		args = append(args, filters.KeyValuePair{Key: k, Value: v})
+	}
+	services, err = d.client.ServiceList(ctx, types.ServiceListOptions{Filters: filters.NewArgs(args...)})
+	if err != nil {
+		return nil, err
+	}
+	return services, nil
+}
+
+func (d *dockerUtil) RemoveService(ctx context.Context, id string) (err error) {
+	if err = d.client.ServiceRemove(ctx, id); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *dockerUtil) T() {
+	_, err := d.client.ServiceCreate(context.Background(), swarm.ServiceSpec{
+		Annotations: swarm.Annotations{
+			Name: "demo",
+		},
+		TaskTemplate: swarm.TaskSpec{
+			ContainerSpec: &swarm.ContainerSpec{
+				Image: "nginx",
+				User:  "root",
+				TTY:   true,
+				Mounts: []mount.Mount{{Type: mount.TypeVolume, Target: "/home", VolumeOptions: &mount.VolumeOptions{
+					DriverConfig: &mount.Driver{
+						Name: "local",
+						Options: map[string]string{
+							"type":   "nfs",
+							"o":      fmt.Sprintf("addr=%s,rw", "10.50.3.213"),
+							"device": fmt.Sprintf(":%s", "/home/horace/testNfs4"),
+						},
+					},
+				}}},
+			},
+		},
+		EndpointSpec: &swarm.EndpointSpec{
+			Ports: []swarm.PortConfig{{TargetPort: 80}},
+		},
+	}, types.ServiceCreateOptions{})
+	if err != nil {
+		return
+	}
+
+	list, err := d.client.ServiceList(context.Background(), types.ServiceListOptions{
+		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: "demo"}),
+	})
+	//info, err := d.ServerInfo(context.Background())
+	//if err != nil {
+	//	return
+	//}
+	//nodes, err := d.client.NodeList(context.Background(), types.NodeListOptions{})
+	//if err != nil {
+	//	return
+	//}
+	//
+	//if err != nil {
+	//	return
+	//}
+	d.client.ServiceRemove(context.Background(), list[0].ID)
 }

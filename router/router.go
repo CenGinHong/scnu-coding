@@ -35,8 +35,5 @@ func init() {
 	s.Group("/common", func(group *ghttp.RouterGroup) {
 		group.POST("/verCode", api.Common.SendVerCode)
 	})
-	//s.Group("/chat", func(group *ghttp.RouterGroup) {
-	//	group.ALL("/", api.Hello.Index1)
-	//})
 	s.BindHandler("/chat", api.Hello.Index1)
 }

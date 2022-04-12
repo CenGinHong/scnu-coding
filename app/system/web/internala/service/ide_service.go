@@ -3,17 +3,15 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/os/gtime"
-	"github.com/gogf/gf/text/gstr"
 	"github.com/gogf/gf/util/gconv"
 	"scnu-coding/app/dao"
 	"scnu-coding/app/service"
 	"scnu-coding/app/system/web/internala/define"
 	"scnu-coding/app/utils"
 	"scnu-coding/library/role"
+	"strings"
 	"sync"
 	"time"
 )
@@ -21,23 +19,19 @@ import (
 var IDE = newIDEService()
 
 type iDEService struct {
-	ide           iIDE
-	ideAliveCache utils.MyCache
-	lock          utils.MyMutex
-}
-
-type aliveStruct struct {
-	Count            int         // front的数量
-	CreatedAt        *gtime.Time // 创建时间
-	CountResetZeroAt *gtime.Time // count最近清零的时间
+	ide               iIDE
+	ideHeartBeatCache utils.MyCache
+	lock              utils.MyMutex
 }
 
 func newIDEService() iDEService {
 	i := iDEService{}
 	i.ide = newIDE()
-	i.ideAliveCache = *utils.NewMyCache()
+	i.ideHeartBeatCache = *utils.NewMyCache()
 	i.lock = utils.NewMyMutex()
+	// 在服务重启将所有ide关闭
 	i.removeAllIDE()
+	go i.shutDownExpire()
 	return i
 }
 
@@ -70,95 +64,104 @@ func (t *iDEService) OpenIDE(ctx context.Context, req *define.OpenIDEReq) (url s
 	if err != nil {
 		return "", err
 	}
+	// 先置入一个心跳
+	if err = t.Heartbeat(ctx, &define.HeartBeatReq{
+		IDEIdentifier: req.IDEIdentifier,
+	}); err != nil {
+		return "", err
+	}
 	return url, nil
 }
 
-// FrontAlive 新打开一个容器页面
+// Heartbeat 新打开一个容器页面
 // @params userId
 // @params labId
 // @return err
 // @date 2021-05-03 00:06:16
 // 注意该请求是由插件发出，没有token携带userId信息
-func (t *iDEService) FrontAlive(_ context.Context, req *define.FrontAliveReq) (err error) {
+func (t *iDEService) Heartbeat(_ context.Context, req *define.HeartBeatReq) (err error) {
 	t.lock.Lock()
 	defer t.lock.UnLock()
-	alive := &aliveStruct{}
 	key := fmt.Sprintf("%d-%d", req.UserId, req.LabId)
-	data, err := t.ideAliveCache.Cache.GetOrSet(key, &aliveStruct{
-		Count:            0,
-		CreatedAt:        gtime.Now(),
-		CountResetZeroAt: nil,
+	// 取出所有心跳池的值
+	v, err := t.ideHeartBeatCache.GetOrSet(key, &define.IDEHeartBeat{
+		ActiveTime: gtime.Now(),
+		StartTime:  gtime.Now(),
 	}, 0)
 	if err != nil {
 		return err
 	}
-	if err = gconv.Struct(data, &alive); err != nil {
+	heartbeat := &define.IDEHeartBeat{}
+	if err = gconv.Struct(v, &heartbeat); err != nil {
 		return err
 	}
-	// 看看要不要
-	if req.IsOpen {
-		alive.Count++
-		alive.CountResetZeroAt = nil
-	} else {
-		alive.Count--
-	}
-	// 触发关闭检查
-	if alive.Count == 0 {
-		currentTime := gtime.Now()
-		alive.CountResetZeroAt = currentTime
-		go t.readyToShutDown(key, currentTime)
-	}
-	if err = t.ideAliveCache.Cache.Set(key, alive, 0); err != nil {
+	heartbeat.ActiveTime = gtime.Now()
+	if err = t.ideHeartBeatCache.Set(key, heartbeat, 0); err != nil {
 		return err
 	}
+	g.Log().Debug("receive a heartbeat")
 	return nil
 }
 
-func (t *iDEService) readyToShutDown(key string, atZeroTime *gtime.Time) {
+func (t *iDEService) shutDownExpire() {
 	// 先睡眠30秒
-	time.Sleep(time.Duration(30) * time.Second)
-	t.lock.Lock()
-	defer t.lock.UnLock()
 	// 重新取值检查
-	data, err := t.ideAliveCache.Cache.GetOrSet(key, &aliveStruct{
-		Count:            0,
-		CreatedAt:        gtime.Now(),
-		CountResetZeroAt: nil,
-	}, 0)
-	if err != nil {
-		g.Log().Error(err)
-		return
+	for true {
+		time.Sleep(time.Duration(3) * time.Minute)
+		func() {
+			t.lock.Lock()
+			defer t.lock.UnLock()
+			// 列出所有在运行的ide
+			names := t.ide.ListIDEContainerName(context.Background())
+			wg := sync.WaitGroup{}
+			for _, name := range names {
+				g.Log().Debug(name)
+				v, err := t.ideHeartBeatCache.Get(name)
+				if err != nil {
+					continue
+				}
+				heartbeat := &define.IDEHeartBeat{}
+				if v != nil {
+					if err = gconv.Struct(v, &heartbeat); err != nil {
+						continue
+					}
+				}
+				// 超时，回收IDE
+				if v == nil || heartbeat.StartTime.Add(time.Duration(1)*time.Minute).Before(gtime.Now()) {
+					wg.Add(1)
+					split := strings.Split(name, "-")
+					userId := gconv.Int(split[1])
+					labId := gconv.Int(split[2])
+					key := fmt.Sprintf("%d-%d", userId, labId)
+					// 移除
+					go func() {
+						defer wg.Done()
+						if err = t.ide.RemoveIDE(context.Background(), &define.IDEIdentifier{
+							UserId: userId,
+							LabId:  labId,
+						}); err != nil {
+							return
+						}
+						// 缓存处理
+						{
+							// 记录下编码时间
+							if _, err = dao.CodingTime.Ctx(context.Background()).Insert(g.Map{
+								dao.CodingTime.Columns.UserId:   userId,
+								dao.CodingTime.Columns.LabId:    labId,
+								dao.CodingTime.Columns.Duration: gtime.Now().Sub(heartbeat.StartTime),
+							}); err != nil {
+								return
+							}
+							if _, err = t.ideHeartBeatCache.Remove(key); err != nil {
+								return
+							}
+						}
+					}()
+				}
+			}
+			wg.Wait()
+		}()
 	}
-	alive := &aliveStruct{}
-	if err = gconv.Struct(data, alive); err != nil {
-		g.Log().Error(err)
-		return
-	}
-	// 触发关闭
-	if alive.CountResetZeroAt != nil && alive.CountResetZeroAt == atZeroTime {
-		split := gstr.Split(key, "-")
-		userId := gconv.Int(split[0])
-		labId := gconv.Int(split[1])
-		// 移除容器
-		if err = t.ide.RemoveIDE(context.Background(), &define.IDEIdentifier{UserId: userId, LabId: labId}); err != nil {
-			return
-		}
-		// 移除缓存
-		if _, err = t.ideAliveCache.Cache.Remove(key); err != nil {
-			g.Log().Error(err)
-			return
-		}
-		// 插入编码时间
-		duration := alive.CountResetZeroAt.Sub(alive.CreatedAt).Minutes()
-		if _, err = dao.CodingTime.Ctx(context.Background()).Data(g.Map{
-			dao.CodingTime.Columns.UserId:   userId,
-			dao.CodingTime.Columns.Duration: duration,
-			dao.CodingTime.Columns.LabId:    labId,
-		}).Insert(); err != nil {
-			g.Log().Error(err)
-		}
-	}
-	return
 }
 
 // removeAllIDE 关闭所有IDE容器
@@ -168,28 +171,32 @@ func (t *iDEService) readyToShutDown(key string, atZeroTime *gtime.Time) {
 // @date 2022-01-13 11:19:00
 func (t *iDEService) removeAllIDE() {
 	// 列表还在存活
-	containers, err := utils.DockerUtil.ListContainer(context.Background(), types.ContainerListOptions{
-		All:     true,
-		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: "ide"})})
-	if err != nil {
-		panic(err)
-	}
+	t.lock.Lock()
+	defer t.lock.UnLock()
+	ideContainerNames := t.ide.ListIDEContainerName(context.Background())
 	wg := &sync.WaitGroup{}
-	for _, container := range containers {
+	for _, ideContainerName := range ideContainerNames {
 		wg.Add(1)
-		go func(container1 types.Container) {
+		go func(container1 string) {
 			defer wg.Done()
-			if err = utils.DockerUtil.RemoveContainer(context.Background(), container1.ID); err != nil {
+			split := strings.Split(container1, "-")
+			userId := gconv.Int(split[1])
+			labId := gconv.Int(split[2])
+			if err := t.ide.RemoveIDE(context.Background(),
+				&define.IDEIdentifier{
+					UserId: userId,
+					LabId:  labId,
+				}); err != nil {
 				panic(err)
 			}
-		}(container)
+		}(ideContainerName)
 	}
 	wg.Wait()
 }
 
 func (t *iDEService) IsIDERunning(userId int, labId int) (isExist bool) {
 	containerName := fmt.Sprintf("ide-%d-%d", userId, labId)
-	isExist, err := t.ideAliveCache.Contains(containerName)
+	isExist, err := t.ideHeartBeatCache.Contains(containerName)
 	if err != nil {
 		return
 	}

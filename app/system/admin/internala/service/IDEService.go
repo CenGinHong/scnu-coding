@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/gogf/gf/database/gdb"
 	"github.com/gogf/gf/util/gconv"
 	"scnu-coding/app/dao"
@@ -22,10 +20,7 @@ type iDEService struct {
 // ListContainer 列出所有容器信息
 func (s iDEService) ListContainer(ctx context.Context) (resp *response.PageResp, err error) {
 	ctxPage := service.Context.Get(ctx).PageInfo
-	containers, err := utils.DockerUtil.ListContainer(ctx, types.ContainerListOptions{
-		All:     true,
-		Filters: filters.NewArgs(filters.KeyValuePair{Key: "name", Value: "ide"}),
-	})
+	containers, err := utils.DockerUtil.ListContainer(ctx, map[string]string{"name": "ide"})
 	if err != nil {
 		return nil, err
 	}

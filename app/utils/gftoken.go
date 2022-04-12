@@ -59,13 +59,13 @@ func AuthAfterFunc(r *ghttp.Request, respData gtoken.Resp) {
 	//存在令牌
 	if respData.Success() {
 		// 鉴权
-		id := respData.GetString("userKey")
-		if ok, err := authenticate(r.Context(), id, r.Router.Uri, r.Method); err != nil {
-			response.Exit(r, gerror.NewCode(gcode.CodeNotAuthorized))
-		} else if !ok {
-			// 权限不足
-			response.Exit(r, gerror.NewCode(gcode.CodeNotAuthorized))
-		}
+		_ = respData.GetString("userKey")
+		//if ok, err := authenticate(r.Context(), id, r.Router.Uri, r.Method); err != nil {
+		//	response.Exit(r, gerror.NewCode(gcode.CodeNotAuthorized))
+		//} else if !ok {
+		//	// 权限不足
+		//	response.Exit(r, gerror.NewCode(gcode.CodeNotAuthorized))
+		//}
 		r.Middleware.Next()
 	} else {
 		//不存在令牌

@@ -14,7 +14,6 @@ import (
 func Init() {
 	s := g.Server()
 	s.Group("/web", func(group *ghttp.RouterGroup) {
-		//utils.GfToken.Middleware(group)
 		group.Group("/user", func(group *ghttp.RouterGroup) {
 			// 获取自己的用户信息
 			group.GET("/myself", api.User.GetUserInfo)
@@ -30,7 +29,7 @@ func Init() {
 		})
 		group.Group("/ide", func(group *ghttp.RouterGroup) {
 			group.POST("/", api.Ide.OpenIDE)
-			group.PUT("/open", api.Ide.FrontAlive)
+			group.PUT("/heartbeat", api.Ide.Heartbeat)
 		})
 		group.Group("/checkin", func(group *ghttp.RouterGroup) {
 			group.GET("/student", api.Checkin.StuListCheckinRecords)

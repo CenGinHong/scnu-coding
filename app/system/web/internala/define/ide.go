@@ -19,9 +19,8 @@ type IDEIdentifier struct {
 	LabId  int
 }
 
-type FrontAliveReq struct {
+type HeartBeatReq struct {
 	IDEIdentifier
-	IsOpen bool // 打开/关闭页面
 }
 
 // ContainerStat 有些不会怎么用到的字段我先注释了
@@ -136,15 +135,10 @@ type ContainerStat struct {
 	} `json:"networks"`
 }
 
-//type CloseIDEReq struct {
-//	IDEIdentifier
-//}
-
-//type CheckCodeReq struct {
-//	TeacherId int
-//	UserId     int
-//	LabId     int
-//}
+type IDEHeartBeat struct {
+	ActiveTime *gtime.Time
+	StartTime  *gtime.Time
+}
 
 //type CompilerErrorLogResp struct {
 //	UserId       int    `json:"stuId"`
@@ -186,20 +180,4 @@ type ContainerStat struct {
 //	Num2       string `json:"num_2"`
 //	Url        string `json:"url"`
 //	Similarity int    `json:"similarity"`
-//}
-
-//type PlagiarismCheckReq struct {
-//	LabId int
-//}
-//
-//type IdeAliveReq struct {
-//	UserId int // 用户Id
-//	LabId  int // 实验Id
-//}
-//
-//type FileNode struct {
-//	Name string `json:"name"` // 文件/文件夹名字
-//	//IsDir     bool        `json:"isDir"`     // 是否文件夹
-//	Content   string      `json:"content"`   // 内容
-//	ChildNode []*FileNode `json:"childNode"` // 子节点
 //}

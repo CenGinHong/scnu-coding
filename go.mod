@@ -2,6 +2,7 @@ module scnu-coding
 
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
+	github.com/CenGinHong/TinyRPC v0.0.0-20220404021756-3a1513da4d4a
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/containerd/containerd v1.5.7 // indirect
 	github.com/desops/sshpool v0.0.8
@@ -10,7 +11,6 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/go-redsync/redsync/v4 v4.4.1
-	github.com/gocarina/gocsv v0.0.0-20211203214250-4735fba0c1d9 // indirect
 	github.com/goflyfox/gtoken v1.4.3
 	github.com/gogf/gcache-adapter v0.1.2
 	github.com/gogf/gf v1.16.6
@@ -25,6 +25,7 @@ require (
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.14
 	github.com/minio/sha256-simd v1.0.0 // indirect
+	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/pkg/sftp v1.13.3 // indirect
 	github.com/rs/xid v1.3.0 // indirect
 	github.com/xuri/excelize/v2 v2.5.0
